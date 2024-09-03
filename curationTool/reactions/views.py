@@ -47,41 +47,33 @@ import os
 from reactions.utils.GPT_functions import get_gene_name, get_vmh_met_from_inchi, metanetx_to_inchi, get_ncbi_gene_id, get_vmh_synonyms, get_gene_reactions, extract_compounds, vmh_to_normal, get_cid_vmh_api, get_cid_api, get_metanetx_id, get_metanetx_id_by_name, parse_metabolic_reactions, parse_metabolic_reactions_gpt, help_format_answer_with_gpt, askGPT4, pubchem_similarity_search, jaccard_similarity, flatten_extend, evaluate_predictions, check_match, print_output
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_GET
-
+def about_view(request):
+    return render(request, 'reactions/about.html')
 @login_required
 def get_user_flags(request, user_id):
     try:
         user = User.objects.get(pk=user_id)
-        flags = user.flags.all()  # Retrieve all flags for this user
+        flags = user.flags.all()
         flags_data = [{'id': flag.id, 'name_flag': flag.name_flag, 'color': flag.color} for flag in flags]
         return JsonResponse({'status': 'success', 'flags': flags_data})
-    except User.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Invalid user'})
-
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @csrf_exempt
 @login_required
 def add_flag(request):
     if request.method == 'POST':
         try:
-            # Parse JSON data from request body
             data = json.loads(request.body)
-            
             user_id = data.get('user_id')
             flag_name = data.get('name_flag')
             flag_color = data.get('color')
-
             user = User.objects.get(pk=user_id)
         except User.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Invalid user'})
         
         if flag_name and flag_color:
-            flag, created = Flag.objects.get_or_create(
-                name_flag=flag_name,
-                color=flag_color,
-                user=user
-            )
-
+            flag, created = Flag.objects.get_or_create(name_flag=flag_name, color=flag_color, user=user)
             return JsonResponse({
                 'status': 'success',
                 'message': 'Flag added successfully',
@@ -89,8 +81,6 @@ def add_flag(request):
             })
         else:
             return JsonResponse({'status': 'error', 'message': 'Flag name and color are required'})
-
-    
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 def get_vmh_subsystems():
@@ -100,7 +90,7 @@ def get_vmh_subsystems():
 
     # Fetch subsystems from VMH
     while True:
-        response = requests.get(endpoint)
+        response = requests.get(endpoint, verify=False)
         data = response.json()['results']
         subsystems.extend([subsystem['name'] for subsystem in data])
         endpoint = response.json().get('next')
@@ -294,7 +284,7 @@ def get_gene_info(request):
         # If not found in Entrez, check VMH
         vmh_base_url = 'https://www.vmh.life/'
         vmh_endpoint = f"{vmh_base_url}_api/genes/?gene_number={gene_input}"
-        vmh_response = requests.get(vmh_endpoint)
+        vmh_response = requests.get(vmh_endpoint, verify=False)
         
         if vmh_response.status_code != 200:
             return JsonResponse({'error': True, 'message': f'VMH API returned error {vmh_response.status_code} for gene number `{gene_input}`'}, status=500)
@@ -930,8 +920,7 @@ def save_user_reaction(request):
 
         if user and reaction:
             reaction.short_name = short_name
-
-            if flag_name != 'None' and flag_color != 'null':
+            if flag_name.strip() not in ['None', 'Choose a flag'] and flag_color != 'null':
                 # Get or create the flag
                 flag = Flag.objects.get(name_flag=flag_name, color=flag_color)
 
@@ -950,38 +939,23 @@ def save_user_reaction(request):
 @csrf_exempt 
 def save_flags_in_saved_reactions(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
-        
-        userID = data.get('userID')
-        reaction_ids = data.get('reaction_ids',[])
-        reaction_ids = [int(reaction_id) for reaction_id in reaction_ids]
-
-        flag_name = data.get('flag_name')
-        flag_color = data.get('flag_color')
-        print(reaction_ids)
-        # Validate user
         try:
-            user = User.objects.get(pk=userID)
-        except User.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Invalid user ID'})
+            data = json.loads(request.body)
+            user_id = data.get('userID')
+            reaction_ids = data.get('reaction_ids', [])
+            flag_name = data.get('flag_name')
+            flag_color = data.get('flag_color')
 
-        if flag_name != 'None' and flag_color != 'null':
-                # Get or create the flag
-            flag = Flag.objects.get(name_flag=flag_name, color=flag_color)
+            user = User.objects.get(pk=user_id)
+            flag = Flag.objects.get(name_flag=flag_name, color=flag_color, user=user)
 
-        for reaction_id in reaction_ids:
-            try:
-                reaction = Reaction.objects.get(pk=reaction_id)
+            for reaction_id in reaction_ids:
+                reaction = get_object_or_404(Reaction, pk=reaction_id)
                 reaction.flags.add(flag)
-                reaction.save()
-            except Reaction.DoesNotExist:
-                return JsonResponse({'status': 'error', 'message': f'Invalid reaction ID: {reaction_id}'})
 
-            reaction.flags.add(flag)
-            reaction.save()
-
-        return JsonResponse({'status': 'success'})
-
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 def saved_reactions(request, modal=False):

@@ -1,18 +1,18 @@
 .header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    flex-direction: row;
+    gap: 10px;
+    margin-left: 10px;
 }
 
 .add-to-vmh-btn, .add-to-rhea-btn, .add-to-metanetx-btn,.add-flag-btn{
-    padding: 10px 20px;
     background-color: #2196F3; /* Blue background */
     color: white;
-    border: none;
-    border-radius: 5px;
     font-size: 16px;
     cursor: pointer;
     transition: background-color 0.2s ease-in-out;
+    height: 4vh;
 }
 
 .add-to-vmh-btn:hover, .add-to-rhea-btn:hover, .add-to-metanetx-btn:hover,.add-flag-btn {
@@ -23,7 +23,17 @@
     outline: none;
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.5);
 }
-
+#addToVMH {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    justify-content: space-between;
+}
+.vmh-icon {
+    width: 26px; /* Adjust width to your preference */
+    height: 26px; /* Adjust height to your preference */
+    vertical-align: middle; /* Ensures the icon aligns vertically with the text */
+}
 html, body {
     font-family: 'Poppins', sans-serif !important;
     width: 100%;
@@ -31,9 +41,6 @@ html, body {
     padding: 0;
     background-color: #e7f7ff !important; 
 }
-
-
-
 
 
 h1 {
@@ -856,6 +863,14 @@ select, input[type="text"] {
     box-sizing: border-box;
     padding: 0 1%; /* Add some padding to ensure spacing between elements and the edges */
 }
+.saved-reaction-user-info {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1;
+    margin-top: 0; /* Removed to align with the other elements */
+    margin-right: 0; /* Removed to align with the other elements */
+}
 
 .icon {
     display: flex;
@@ -864,7 +879,6 @@ select, input[type="text"] {
     flex: 1;
     margin-left: 1%;
 }
-
 .search-bar {
     position: relative;
     width: 40%;
@@ -877,11 +891,12 @@ select, input[type="text"] {
 
 .search-bar input[type="text"] {
     width: 100%;
-    padding: 10px 15px 10px 40px;
+    padding: 10px 15px 10px 40px; /* Adjust padding to accommodate search icon */
     border: 1px solid #ccc;
     border-radius: 25px;
     font-size: 16px;
     box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+    padding-right: 40px; /* Add padding to accommodate the filter button */
 }
 
 .search-bar .search-icon {
@@ -892,32 +907,58 @@ select, input[type="text"] {
     font-size: 18px;
     color: #aaa;
 }
-.search-bar .filter-button {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
+
+#FilterFlag {
     background: none;
     border: none;
     cursor: pointer;
     color: #aaa;
+    position: absolute; /* Position button within the search bar */
+    right: 10px; /* Adjust the right position to align it correctly */
+    top: 50%;
+    transform: translateY(-50%);
 }
 
-.search-bar .filter-button i {
+#FilterFlag i {
     font-size: 18px; /* Ensures the icon matches the input field styling */
 }
 
-.saved-reaction-user-info {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    flex: 1;
-    margin-top: 0; /* Removed to align with the other elements */
-    margin-right: 0; /* Removed to align with the other elements */
+.filter-container {
+    position: relative; /* This allows the dropdown to be positioned relative to this container */
+    display: inline-block; /* Aligns the container inline with other elements */
 }
 
-.add-to-vmh-btn-container{
-    margin-left: 0.4%;
+#Filteredflag {
+    display: none; /* Initially hidden */
+    position: absolute; /* Position it relative to the container */
+    background-color: #fff;
+    width: 200px; /* Adjust as necessary */
+    z-index: 1000;
+    padding: 10px;
+    font-size: small;
+    height: auto; /* Allow the dropdown to grow with content */
+    top: 100%; /* Position directly below the button */
+    left: 0; /* Align with the left edge of the button */
+}
+.dropdown-item.selected {
+    background-color: #92d5f7; /* Light blue highlight for a professional look */
+    color: #005662; /* Text color for contrast */
+    border-radius: 4px; /* Adds a subtle rounding for a modern look */
+}
+
+
+
+.dropdown-item {
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s ease; /* Smooth transition for highlight */
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-item:hover {
+    background-color: #f0f0f0; /* Subtle gray background on hover */
 }
 
 
@@ -965,36 +1006,6 @@ select, input[type="text"] {
     display: block;
 }
 
-#Filteredflag {
-    display: none; /* Initially hidden */
-    position: absolute; /* Position it relative to the page or a container */
-    background-color: #fff;
-    border: 1px solid #ccc;
-    width: 200px; /* Adjust as necessary */
-    z-index: 1000;
-    padding: 10px;
-    margin-top: 62%;
-    margin-left: 58%;
-    font-size: small;
-    height: auto; /* Allow the modal to grow with content */
-    width: 35%; /* Set a fixed width */
-}
-
-#FilterFlag{
-   
-    margin-left: 15%;
-}
-
-.dropdown-item {
-    padding: 5px 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-}
-
-.dropdown-item:hover {
-    background-color: #f0f0f0;
-}
 
 #arrow{
     position: absolute;

@@ -58,7 +58,6 @@ urlpatterns = [
     path('clear-session/', views.clear_session, name='clear_session'),
     path('user_saved_reaction_ids/', views.get_user_saved_reaction_ids, name='get_user_saved_reaction_ids'),
     path('create-formula-abbr/', views.create_formula_abbr, name='create_formula_abbr'),
-    path('saved_reactions/save_reaction/', views.save_user_reaction, name='save_reaction_duplicate'),
 
     path('register_user',views.register_user,name='register_user'),
     path('check-reaction', views.is_reaction_in_user_saved_reactions, name='check_reaction'),
@@ -67,7 +66,7 @@ urlpatterns = [
     path('search_reactions/', views.search_reactions, name='search_reactions'),
     path('user-reactions-vmh/', views.get_user_reactions_and_vmh, name='get_user_reactions_and_vmh'),
     path('saved_reactions/reactions/clone/', views.clone_reaction_view, name='clone_reaction'),
-
+    path('about/', views.about_view, name='about'),
     path('stats/', views.leader_board, name='leader_board'),
     path('saved-reactions-modal/', lambda request: saved_reactions(request, modal=True), name='saved_reactions_modal_content'),
     path('flags/<int:user_id>/', views.get_user_flags, name='get_user_flags'),
