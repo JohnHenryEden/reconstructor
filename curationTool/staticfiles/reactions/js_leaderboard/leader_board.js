@@ -17,14 +17,12 @@ function loadLeaderBoardData() {
           row.setAttribute('data-name', user.full_name);
           row.setAttribute('data-saved', user.saved);
           row.setAttribute('data-added', user.added);
-          row.setAttribute('data-created', user.created);
 
           row.innerHTML = `
             <th>${index + 1}</th>
             <td>${user.full_name}</td>
             <td>${user.saved}</td>
             <td>${user.added}</td>
-            <td>${user.created}</td>
           `;
           tableBody.appendChild(row);
         });
@@ -52,13 +50,6 @@ function loadLeaderBoardData() {
                     backgroundColor: 'rgba(153, 102, 255, 0.2)',
                     borderColor: 'rgba(153, 102, 255, 1)',
                     borderWidth: 1
-                  },
-                  {
-                    label: 'Reactions Created',
-                    data: usersData.map(user => user.created),
-                    backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                    borderColor: 'rgba(255, 159, 64, 1)',
-                    borderWidth: 1
                   }
                 ]
               },
@@ -82,21 +73,18 @@ function loadLeaderBoardData() {
                 const name = row.getAttribute('data-name');
                 const saved = row.getAttribute('data-saved');
                 const added = row.getAttribute('data-added');
-                const created = row.getAttribute('data-created');
 
-                reactionChart.data.labels = ['Reactions Saved', 'Reactions Added to VMH', 'Reactions Created'];
+                reactionChart.data.labels = ['Reactions Saved', 'Reactions Added to VMH'];
                 reactionChart.data.datasets = [{
                   label: `${name}'s Stats`,
-                  data: [saved, added, created],
+                  data: [saved, added],
                   backgroundColor: [
                     'rgba(75, 192, 192, 0.2)',
                     'rgba(153, 102, 255, 0.2)',
-                    'rgba(255, 159, 64, 0.2)'
                   ],
                   borderColor: [
                     'rgba(75, 192, 192, 1)',
                     'rgba(153, 102, 255, 1)',
-                    'rgba(255, 159, 64, 1)'
                   ],
                   borderWidth: 1
                 }];
@@ -123,13 +111,6 @@ function loadLeaderBoardData() {
                     backgroundColor: 'rgba(153, 102, 255, 0.2)',
                     borderColor: 'rgba(153, 102, 255, 1)',
                     borderWidth: 1
-                  },
-                  {
-                    label: 'Reactions Created',
-                    data: usersData.map(user => user.created),
-                    backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                    borderColor: 'rgba(255, 159, 64, 1)',
-                    borderWidth: 1
                   }
                 ];
                 reactionChart.update();
@@ -153,13 +134,6 @@ function loadLeaderBoardData() {
                 backgroundColor: 'rgba(153, 102, 255, 0.2)',
                 borderColor: 'rgba(153, 102, 255, 1)',
                 borderWidth: 1
-              },
-              {
-                label: 'Reactions Created',
-                data: usersData.map(user => user.created),
-                backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                borderColor: 'rgba(255, 159, 64, 1)',
-                borderWidth: 1
               }
             ];
             reactionChart.update();
@@ -172,21 +146,19 @@ function loadLeaderBoardData() {
     .catch(error => console.error('Error fetching user data:', error));
 }
 
-window.onload = function() {
-  const observer = new MutationObserver((mutationsList, observer) => {
-    const viewLeaderBoardButton = document.getElementById('view-leader-board');
-    if (viewLeaderBoardButton) {
-      viewLeaderBoardButton.addEventListener('click', () => {
-        window.open(`${window.location.origin}/stats/`, '_blank');
-      });
-      observer.disconnect(); // Stop observing once the button is found
-    }
-  });
+document.addEventListener('DOMContentLoaded', function() {
+  const viewLeaderBoardButton = document.getElementById('view-leader-board');
+  
+  // Add click event for opening leaderboard if the button is present
+  if (viewLeaderBoardButton) {
+    viewLeaderBoardButton.addEventListener('click', () => {
+      window.open(`${window.location.origin}/stats/`, '_blank');
+    });
+  }
 
-  observer.observe(document.body, { childList: true, subtree: true });
-
-  // Optionally load leaderboard data if on the leaderboard page
+  // Automatically load leaderboard data if already on the stats page
   if (window.location.pathname === '/stats/') {
     loadLeaderBoardData();
   }
-};
+});
+
