@@ -49,15 +49,19 @@ document.getElementById('reactionForm').addEventListener('submit', function(e) {
     }
 
     var inputsGroups = document.querySelectorAll('.inputs-group');
-    inputsGroups.forEach(function(group) {
+    
+    for (var i = 0; i < inputsGroups.length; i++) {
+        var group = inputsGroups[i];
         var statusDot = group.querySelector('.status-dot');
-        if (!statusDot){
-            console.error('Status dot not found in inputs group:', group);
-            alert('Please confirm all metabolites before submitting.');
-            return;
+        console.log('Status dot:', statusDot);
+        if (statusDot.style.display === 'none') {
+            var errorMessage = 'Verify all metabolites before creating reaction.';
+            showErrorModal(errorMessage);
+            window.scrollTo(0, 0);
+            return
         }
-    });
-
+    }
+    
 
     var isValidSubsystem = subsystemList.some(subsystem => subsystem.toLowerCase() === subsystemField.toLowerCase());
 

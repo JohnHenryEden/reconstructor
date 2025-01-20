@@ -22,7 +22,7 @@ function loadAtomMappingDiv(reactionData) {
         let newReactionImage = document.createElement('img');
         newReactionImage.className = imageClass;
         newReactionImage.id = reactionImageId;
-        newReactionImage.name = reactionImageName;  // Set the name directly on the new element
+        newReactionImage.name = reactionImageName; 
     
         // Generate cache buster and set the new image source
         let cacheBuster = new Date().getTime() + "_" + Math.random();
@@ -31,15 +31,64 @@ function loadAtomMappingDiv(reactionData) {
         // Append the new image to the contentDiv
         contentDiv.appendChild(newReactionImage);
     
-        // Apply the blowup effect to the newly created image
+        let lastMousePos = { x: 0, y: 0 };
+
         newReactionImage.addEventListener('load', function() {
+            let currentScale = 1.5;
+        
+            // 1) Initialize blowup once.
             $("#" + reactionImageId).blowup({
-                "width": 300,            // Custom width of the lens
-                "height": 300,            // Custom height of the lens
-                "border" : "6px solid #f2711c",
-                "scale" : 2.3 
+                width: 300,
+                height: 300,
+                border: "6px solid #f2711c",
+                scale: currentScale
             });
-        });
+        
+            // 2) Track mouse position as we move around
+            $("#" + reactionImageId).on("mousemove.blowupPos", function(e) {
+                lastMousePos.x = e.pageX;
+                lastMousePos.y = e.pageY;
+            });
+        
+            // 3) On wheel scroll, zoom in/out
+            $("#" + reactionImageId).on("wheel", function(e) {
+                e.preventDefault();
+                if (e.originalEvent.deltaY < 0) {
+                    currentScale += 0.2; // Zoom in
+                } else {
+                    currentScale = Math.max(0.5, currentScale - 0.2); // Zoom out
+                }
+                
+                // Remove the old blowup events and lens
+                $(this).off("mouseenter mouseleave mousemove");
+                $(".BlowupLens").remove();
+        
+                // Re-initialize blowup with the new scale
+                $(this).blowup({
+                    width: 300,
+                    height: 300,
+                    border: "6px solid #f2711c",
+                    scale: currentScale
+                });
+        
+                // Re-enable mouse tracking on the new instance
+                $(this).on("mousemove.blowupPos", function(e) {
+                    lastMousePos.x = e.pageX;
+                    lastMousePos.y = e.pageY;
+                });
+        
+                // Force the lens to appear if still hovering
+                $(this).trigger("mouseenter");
+        
+                // 4) Immediately 'fake' a mousemove event at the last known position
+                $(this).trigger(
+                    $.Event("mousemove", {
+                        pageX: lastMousePos.x,
+                        pageY: lastMousePos.y
+                    })
+                );
+            });
+        });       
     
         // Ensure the contentDiv is visible
         contentDiv.style.display = 'block';

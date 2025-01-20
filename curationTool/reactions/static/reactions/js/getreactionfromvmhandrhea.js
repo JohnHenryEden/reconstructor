@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const reactionInput = document.getElementById('reactionAbbreviation');
     const submitButton = document.getElementById('submitButton');
     const cancelButton = document.getElementById('cancel-getrxnfromvmhrhea-button');
+
     $('#getrxnfromvmhrhea').click(function() {
         $('.ui.modal.getrxnfromvmhrhea').modal('show');
     });
@@ -12,13 +13,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     submitButton.addEventListener('click', function() {
+        // Disable the button immediately after click
+        submitButton.disabled = true;
+
+        // Handle the actions based on the selection
         if (reactionSelect.value === 'VMH') {
             handleVmhFetch();
         } else if (reactionSelect.value === 'RHEA') {
             handleRheaFetch();
         }
     });
-
 
     function handleReactionSelectChange() {
         const selectedValue = reactionSelect.value;
@@ -39,7 +43,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleVmhFetch() {
-
         if (reactionInput.value.trim()) {
             fetch('/get_from_vmh/', {
                 method: 'POST',
@@ -56,17 +59,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Error: ' + data.error);
                 } else {
                     $('.ui.modal.getrxnfromvmhrhea').modal('hide');
-
                     updateFormFields(data);
                 }
             })
-            .catch(error => console.error('Error:', error.message));
+            .catch(error => console.error('Error:', error.message))
+            .finally(() => {
+                // Re-enable the button after the fetch completes
+                submitButton.disabled = false;
+            });
+        } else {
+            // Re-enable the button if no input is provided
+            submitButton.disabled = false;
         }
     }
 
     function handleRheaFetch() {
         if (reactionInput.value.trim()) {
-            fetch('reaction_view', {
+            fetch('fetch_rhea_rxn', {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -80,13 +89,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.error) {
                     alert('Error: ' + data.error);
                 } else {
-+
                     $('.ui.modal.getrxnfromvmhrhea').modal('hide');
-
                     updateFormFields(data);
                 }
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => console.error('Error:', error))
+            .finally(() => {
+                // Re-enable the button after the fetch completes
+                submitButton.disabled = false;
+            });
+        } else {
+            // Re-enable the button if no input is provided
+            submitButton.disabled = false;
         }
     }
 

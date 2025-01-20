@@ -9,6 +9,8 @@ def get_from_rhea(reaction_abbreviation):
         "format": 'tsv',
         "limit": 10
     }
+    if 'RHEA:' != reaction_abbreviation[:5]:
+        return {"error": "RHEA ID should start with 'RHEA:'"}
 
     response = requests.get(BASE_URL, params=params)
 

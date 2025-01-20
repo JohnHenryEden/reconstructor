@@ -9,8 +9,6 @@ function loadMetaboliteInfoDiv(reactionData) {
         console.error('Metabolite info div not found.');
     }
 }
-
-
 function fillMetaboliteInfoTab(data) {
     const metaboliteInfoContainer = document.getElementById('metaboliteinfo-div');
 
@@ -32,24 +30,42 @@ function fillMetaboliteInfoTab(data) {
             if (structureContainer.style.display === 'none') {
                 structureContainer.style.display = 'block';
                 this.textContent = 'Hide 3D Structure';
-
+        
                 if (!structureContainer.hasAttribute('data-viewer-initialized')) {
+                    // Basic setup
                     structureContainer.style.height = '400px';
                     structureContainer.style.width = '400px';
                     structureContainer.style.position = 'relative';
-
+        
                     let config = { backgroundColor: 'white' };
-                    var viewer = new $3Dmol.createViewer(structureContainer, config);
-                    var molecularData = data.metabolite_mol_file_strings[index];
-                    var format = 'sdf';
-                    viewer.addModel(molecularData, format);
+                    let viewer = new $3Dmol.createViewer(structureContainer, config);
+                    let molecularData = data.metabolite_mol_file_strings[index];
+                    let format = 'sdf';
+        
+                    // Add the molecule model
+                    let model = viewer.addModel(molecularData, format);
+        
+                    viewer.setStyle({}, { stick: { colorscheme: 'greenCarbon' } });
+                    let stereoLocations = data.stereo_locations_list[index];
+                    for (const loc of stereoLocations) {
+                        viewer.setStyle({ model: model, index: loc }, 
+                                        { stick: {color: 'magenta' } });
+                    }
+        
+                    // Make atoms clickable if you want labels on click
                     viewer.setClickable({}, true, function(atom, _viewer, _event, _container) {
-                        viewer.addLabel(atom.atom, { position: atom, backgroundColor: 'darkgreen', backgroundOpacity: 0.8 });
+                        viewer.addLabel(atom.atom, { 
+                            position: atom, 
+                            backgroundColor: 'darkgreen', 
+                            backgroundOpacity: 0.8 
+                        });
                     });
-                    viewer.setStyle({}, { 'stick': { 'colorscheme': 'greenCarbon' } });
+        
+                    // Zoom and render
                     viewer.zoomTo();
                     viewer.render();
-
+        
+                    // Mark as initialized so we don't rebuild next time
                     structureContainer.setAttribute('data-viewer-initialized', 'true');
                 }
             } else {
@@ -57,21 +73,34 @@ function fillMetaboliteInfoTab(data) {
                 this.textContent = 'Show 3D Structure';
             }
         };
-
+        
         toggleDiv.appendChild(nameElement);
         toggleDiv.appendChild(toggleButton);
         metaboliteDiv.appendChild(toggleDiv);
-
+        
+        // Existing formula display
         const formulaElement = document.createElement('p');
         formulaElement.textContent = `Charged Formula: ${data.metabolite_formulas[index]}`;
         metaboliteDiv.appendChild(formulaElement);
-
+        
+        // NEW: Stereo info simplified
+        const stereoCount = data.stereo_counts[index];
+        const stereoCountElement = document.createElement('p');
+        if (stereoCount > 0) {
+            stereoCountElement.textContent = `Number of unspecified Stereo Centers: ${stereoCount} (magenta in the 3D viewer)`;
+        } else {
+            stereoCountElement.textContent = 'No unspecified stereo centers detected.';
+        }
+        metaboliteDiv.appendChild(stereoCountElement);
+        
+        // Structure container
         const structureContainer = document.createElement('div');
         structureContainer.className = 'structure-container';
         structureContainer.style.display = 'none';
         metaboliteDiv.appendChild(structureContainer);
-
+        
         metaboliteInfoContainer.appendChild(metaboliteDiv);
+        
     });
 }
 

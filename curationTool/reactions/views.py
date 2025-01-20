@@ -441,7 +441,7 @@ def input_reaction(request):
                 context = {'form': form, 'error_message': error_message}
                 return render(request, 'reactions/Home_page.html', context)
 
-        metabolite_formulas, metabolite_charges, metabolite_mol_file_strings = get_mol_info(subs_mols + prod_mols)
+        metabolite_formulas, metabolite_charges, metabolite_mol_file_strings, stereo_counts, stereo_locations_list = get_mol_info(subs_mols + prod_mols)
         metabolite_names = substrates_names + products_names
         reaction_rxn_file = construct_reaction_rxnfile(subs_mols, subs_sch, prod_mols, prod_sch, substrates_names, products_names)
         reaction.save()
@@ -501,6 +501,8 @@ def input_reaction(request):
         reaction.metabolite_formulas = json.dumps(metabolite_formulas)
         reaction.metabolite_charges = json.dumps(metabolite_charges)
         reaction.metabolite_mol_file_strings = json.dumps(metabolite_mol_file_strings)
+        reaction.stereo_counts = json.dumps(stereo_counts)
+        reaction.stereo_locations_list = json.dumps(stereo_locations_list)
         reaction.save()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             data = {
@@ -522,6 +524,8 @@ def input_reaction(request):
                 'metabolite_formulas': json.loads(reaction.metabolite_formulas),
                 'metabolite_charges': json.loads(reaction.metabolite_charges),
                 'metabolite_mol_file_strings': json.loads(reaction.metabolite_mol_file_strings),
+                'sterio_counts': json.loads(reaction.stereo_counts),
+                'sterio_locations_list': json.loads(reaction.stereo_locations_list),
             }
             if vmh_found['found']:
                 data['vmh_found'] = vmh_found['found']
@@ -573,7 +577,6 @@ def get_reaction(request, reaction_id):
     """
 
     try:
-        
         reaction = Reaction.objects.get(pk=reaction_id)
         reaction_data = {
             'Organs': reaction.Organs,
@@ -613,7 +616,11 @@ def get_reaction(request, reaction_id):
             'metabolite_formulas': safe_json_loads(reaction.metabolite_formulas),
             'metabolite_charges': safe_json_loads(reaction.metabolite_charges),
             'metabolite_mol_file_strings': safe_json_loads(reaction.metabolite_mol_file_strings),
+            'stereo_counts': safe_json_loads(reaction.stereo_counts),
+            'stereo_locations_list': safe_json_loads(reaction.stereo_locations_list),
         }
+        print(reaction_data['stereo_counts'])
+        print(reaction_data['stereo_locations_list'])
 
         return JsonResponse(reaction_data)
 
@@ -1716,7 +1723,7 @@ def get_available_reactions(request):
 
 
 
-def reaction_view(request):
+def fetch_rhea_rxn(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)

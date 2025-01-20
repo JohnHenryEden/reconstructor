@@ -25,11 +25,12 @@ SECRET_KEY = 'django-insecure-3x4rk(#0pr)5c&z=52$w_v^gj@jpl^*fw@8fa!wxg(o@3sw#mh
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 try:
-    CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
+    CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config.json')
     with open(CONFIG_PATH, 'r') as config_file:
         config = json.load(config_file)
-except:
+except Exception as e:
     config = {'DEBUG': False}
+    print(f"Error reading config file: {e}")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config.get('DEBUG')
 
