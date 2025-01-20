@@ -27,8 +27,6 @@
 
 </head>
 <body>
-
-
     <div class="custom-error-modal" id="error-modal">
         <div class="custom-modal-content">
             <div class="custom-modal-header">
@@ -40,10 +38,6 @@
             </div>
         </div>
     </div>
-    
-    
-    
-
     <div class="top-menu">
         <div class="image-icon item">
             <img src="{% static 'reactions/website-icon.png' %}" alt="Website Icon">
@@ -108,7 +102,7 @@
                     <div id="reactionFormContainer" class = "container">
                         <div class="getbuttoncontainer">
                             <button class="ui violet button" id="getrxnfromvmhrhea">Get Reaction From Rhea and VMH</button>
-                            <button class="ui violet button" id="getrxnfromtemplate">Get Reaction Template</button>
+                            <button class="ui violet button" id="getrxnfromtemplateBtn">Reaction Templates</button>
                         </div>
                         <!-- Form for inputting reaction data -->
                         <form method="post" id="reactionForm">
@@ -296,9 +290,6 @@
                                 </div>
                                 <div id="organDropdown" class="organ-dropdown-content"></div>
                             </div>
-                            
-                            
-
                         </form>
                     </div>
                 </div>  
@@ -333,43 +324,26 @@
                         <button type="submit" id="submitButton" class="ui button" style="display:none;">Submit</button>
                     </div>
                 </div>
-
-                <div class="ui modal getrxntemplate" id ="getrxnfromtemplate">
+                <div class="ui modal getrxntemplate" id="getrxnfromtemplateModal">
                     <i class="close icon"></i>
                     <div class="header">Select Reaction Template</div>
                     <div class="content">
-                      <div class="ui form">
-                        <div class="field">
-                          <label for="reactionSelectemp">Choose a reaction source</label>
-                          <select id="reactionSelectemp" class="ui dropdown">
-                            <option value="" selected>-</option>
-                            <option value="hydrolysis">HYDROLYSIS TEMPLATE</option>
-                            <option value="O2NADPHOX">O2 NADPH ox TEMPLATE</option>
-                            <option value="SULT">SULT TEMPLATE</option>
-                            <option value="UGT">UGT TEMPLATE</option>
-                            <option value="UGT glucose">UGT glucose TEMPLATE</option>
-                            <option value="UGT carb glucur">UGT carb glucur TEMPLATE</option>
-                            <option value="CoA">CoA TEMPLATE</option>
-                            <option value="FAOXhd">FAOXhd TEMPLATE</option>
-                            <option value="FAOXnad">FAOXnad TEMPLATE</option>
-                            <option value="FAOXcoa">FAOXcoa TEMPLATE</option>
-                            <option value="Nad ox">Nad ox TEMPLATE</option>
-                            <option value="NADH red">NADH red TEMPLATE</option>
-                            <option value="cycl">cycl TEMPLATE</option>
-                          </select>
+                        <div class="ui form">
+                            <div class="field">
+                                <label for="reactionField" style="font-size: 1.2em; font-weight: bold;">Reaction Template:</label>
+                                <input type="text" id="reactionField" name="reactionField" autocomplete="off" placeholder="Select a template">
+                                <div id="reactionDropdown" class="dropdown-content-templates"></div>
+                            </div>
                         </div>
-                      </div>
                     </div>
                     <div class="actions">
-                      <button class="ui button" id="applyTemplate">Apply the selected template</button>
+                        <button class="ui button" id="createTemplateBtn">Create New Template</button>
+                        <button class="ui button" id="applyTemplate">Apply</button>
                     </div>
-                  </div>
-    
-                  <div class="content-div" name="atommapping-div" style="display: none;">
+                </div>
+                <div class="content-div" name="atommapping-div" style="display: none;">
                     <div class="div-header">Atom Mapping</div>
-                    
                     <img src="{{ MEDIA_URL }}images/placeholder_image.png" id="atomMappingImage" class="reaction-image">
-                    
                 </div>
                 <div class="content-div" name="cheminfo-div" style="display: none;">
                     <div class="div-header">Chemical Information</div>
@@ -723,6 +697,7 @@
     <script src="{% static 'reactions/js/displayMetaboliteInfo.js' %}"></script>
     <script src="{% static 'reactions/js/reactantsformHandling.js' %}"></script>
     <script src="{% static 'reactions/js/getrxnfromtemplate.js' %}"></script>
+    <script src="{% static 'reactions/js/createTemplate.js' %}"></script>
     <script src="{% static 'reactions/js/ReactantsinputFieldManagement.js' %}"></script>
     <script src="{% static 'reactions/js/reactantsdisplay.js' %}"></script>  
     <script src="{% static 'reactions/js/chemdoodleIntegration.js' %}"></script>

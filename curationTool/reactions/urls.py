@@ -60,5 +60,6 @@ urlpatterns = [
     path('convert_to_smiles/', views.convert_to_smiles, name='convert_to_smiles'),
     path('saved-reactions-modal/', lambda request: saved_reactions(request, modal=True), name='saved_reactions_modal_content'),
     path('user_saved_reaction_ids/', views.get_user_saved_reaction_ids, name='get_user_saved_reaction_ids'),
-
+    path('list_templates/', views.list_templates, name='list_templates'),
+    path('create_template/', views.create_template, name='create_template'),
     ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

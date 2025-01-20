@@ -16,8 +16,6 @@ function setLoggedInStatusBasedOnUrl(reactionData) {
         dotClass = "dot-red"; 
     }
     else {
-
-
         status = "Editing reaction"+" "+reactionData;   
         dotClass = "dot-orange"; 
     }

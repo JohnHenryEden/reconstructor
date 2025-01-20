@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Reaction, ReactionsAddedVMH, MetabolitesAddedVMH, Subsystem, CreatedReaction,Flag
+from .models import User, Reaction, ReactionsAddedVMH, MetabolitesAddedVMH, Subsystem, CreatedReaction,Flag,ReactionTemplate
 
 class CreatedReactionInline(admin.TabularInline):
     model = CreatedReaction
@@ -32,6 +32,30 @@ class FlagAdmin(admin.ModelAdmin):
     search_fields = ('name_flag', 'user__name', 'color')  # Customize search fields
     list_filter = ('color', 'user')  # Add filters for color and user
 
+class ReactionTemplateAdmin(admin.ModelAdmin):
+    """
+    Admin configuration for ReactionTemplate model.
+    """
+    list_display = ('id', 'name', 'is_default', 'user', 'direction', 'subsystem')  # Customize list display
+    search_fields = ('name', 'user__name', 'subsystem', 'direction')  # Fields to search by
+    list_filter = ('is_default', 'user', 'subsystem')  # Add filters for default templates, users, and subsystems
+    readonly_fields = ('is_default',)  # Make is_default read-only
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'user', 'is_default')
+        }),
+        ('Reaction Details', {
+            'fields': ('direction', 'subsystem', 'Organs')
+        }),
+        ('Substrates', {
+            'fields': ('substrates', 'substrates_types', 'subs_comps', 'subs_sch')
+        }),
+        ('Products', {
+            'fields': ('products', 'products_types', 'prods_comps', 'prods_sch')
+        }),
+    )
+
+
 admin.site.register(User, UserAdmin)
 admin.site.register(Reaction, ReactionAdmin)
 admin.site.register(ReactionsAddedVMH)
@@ -39,3 +63,4 @@ admin.site.register(MetabolitesAddedVMH)
 admin.site.register(Subsystem)
 admin.site.register(CreatedReaction, CreatedReactionAdmin)
 admin.site.register(Flag, FlagAdmin)
+admin.site.register(ReactionTemplate, ReactionTemplateAdmin)

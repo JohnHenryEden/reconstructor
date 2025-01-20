@@ -518,8 +518,11 @@
     display: block; /* Show the tooltip on hover */
 }
 
+.subsystem-input {
+    position: relative; /* Make the parent relative to allow absolute positioning of the dropdown */
+}
 
-.dropdown-content {
+.dropdown-content, .dropdown-content-templates {
     display: none; /* Hide the dropdown by default */
     position: absolute; /* Position it just below the input field */
     background-color: #f6f6f6; /* Light background for the dropdown */
@@ -529,80 +532,43 @@
     max-height: 200px; /* Set a maximum height */
     overflow-y: auto; /* Enable vertical scrolling */
     position: absolute; /* To ensure the dropdown overlays content below */
-    z-index: 1; /* Ensure dropdown is above other content */
     background-color: #fff; /* Background color for the dropdown */
     border: 1px solid #ddd; /* Add a light border */
     border-top: none; /* Remove the top border to blend with the input field */
-
-}
-
-.dropdown-content div {
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
-    text-align: center;
-}
-
-/* Hover effect for dropdown items */
-.dropdown-content div:hover {
-    background-color: #ddd;
-}
-
-/* Alternating row colors */
-.dropdown-content div:nth-child(odd) {
-    background-color: #f9f9f9; /* Lighter color for odd rows */
-}
-
-.dropdown-content div:nth-child(even) {
-    background-color: #ececec; /* Slightly darker color for even rows */
-}
-.dropdown-content div:hover {background-color: #ddd;} /* Hover effect for dropdown items */
-
-
-
-.subsystem-input {
-    position: relative; /* Make the parent relative to allow absolute positioning of the dropdown */
-    /* Other styles for the .subsystem-input */
-}
-
-.dropdown-content {
-    display: none; /* Hide the dropdown by default */
     width: 26%;
     margin-left: 17.5%;
     top: 100%; /* Position it just below the input field */
     left: 0; /* Align to the left of the parent */
-    background-color: #f6f6f6; /* Light background for the dropdown */
-    min-width: 160px;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); /* Add some shadow for depth */
-    z-index: 1; /* Ensure it stacks above other content */
-    max-height: 200px; /* Set a maximum height */
-    overflow-y: auto; /* Enable vertical scrolling */
-    background-color: #fff; /* Background color for the dropdown */
-    border: 1px solid #ddd; /* Add a light border */
-    border-top: none; /* Remove the top border to blend with the input field */
-}
 
-.dropdown-content div {
+}
+.dropdown-content-templates{
+    width: 100%;
+    margin-left: 0%;
+}
+.dropdown-content div, .dropdown-content-templates div {
     padding: 12px 16px;
     text-decoration: none;
     display: block;
     text-align: center;
 }
+.dropdown-content-templates div {
+    text-align: left;}
 
 /* Hover effect for dropdown items */
-.dropdown-content div:hover {
+.dropdown-content div:hover, .dropdown-content-templates div:hover {
     background-color: #ddd;
 }
 
 /* Alternating row colors */
-.dropdown-content div:nth-child(odd) {
+.dropdown-content div:nth-child(odd), .dropdown-content-templates div:nth-child(odd) {
     background-color: #f9f9f9; /* Lighter color for odd rows */
 }
 
-.dropdown-content div:nth-child(even) {
+.dropdown-content div:nth-child(even), .dropdown-content-templates div:nth-child(even) {
     background-color: #ececec; /* Slightly darker color for even rows */
 }
-
+.dropdown-content div:hover, .dropdown-content-templates div:hover {
+    background-color: #ddd;} /* Hover effect for dropdown items */
 
 .start-drawing-btn:hover, .edit-drawing-btn {
     background: orange;

@@ -30,7 +30,6 @@ urlpatterns = [
     path('saved_reactions/flags/<int:user_id>/', views.get_user_flags, name='get_user_flags'),
     path('saved_reactions/add_flag/', views.add_flag, name='add_user_flag'),
     path('saved_reactions/save_flags_in_saved_reactions/', views.save_flags_in_saved_reactions, name='save_flags_in_saved_reactions'),
-
     path('get_ai_response/', views.get_ai_response, name='get_ai_response'),
     path('check_reaction_vmh/', views.check_reaction_vmh, name='check_reaction_vmh'),
     path('get_from_vmh/', views.get_from_vmh, name='get_from_vmh'),
@@ -79,5 +78,7 @@ urlpatterns = [
     path('get_rxn_template/', views.get_rxn_template, name='get_rxn_template'),
     path('temp_gene_details/',views.temp_gene_details,name='temp_gene_details'),
     path('convert_to_smiles/', views.convert_to_smiles, name='convert_to_smiles'),
+    path('list_templates/', views.list_templates, name='list_templates'),
+    path('create_template/', views.create_template, name='create_template'),
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

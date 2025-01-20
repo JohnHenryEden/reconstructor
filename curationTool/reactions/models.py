@@ -9,9 +9,10 @@ class User(models.Model):
     orchid_id = models.CharField(max_length=255, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     full_name = models.CharField(max_length=255, blank=True, null=True)
+    templates = models.ManyToManyField('ReactionTemplate', blank=True, related_name='created_by_users')
 
     def check_password(self, raw_password):
-        return raw_password == self.password
+        return self.password == raw_password
 
 
 class Reaction(models.Model):
@@ -45,7 +46,7 @@ class Reaction(models.Model):
     subs_miriams = models.TextField(blank=True, null=True)
     prod_found = models.TextField(blank=True, null=True)
     prod_miriams = models.TextField(blank=True, null=True)
-    Organs = models.TextField(blank=True, null=True)    # New field
+    Organs = models.TextField(blank=True, null=True)
     vmh_found = models.BooleanField(default=False)
     vmh_found_similar = models.BooleanField(default=False)
     vmh_url = models.TextField(blank=True, null=True)
@@ -108,3 +109,54 @@ class Flag(models.Model):
     
 def __str__(self):
     return f"{self.name_flag or 'Unnamed Flag'} ({self.color}) by {self.user.name}"
+
+
+class ReactionTemplate(models.Model):
+    """
+    Stores user-created (or default) reaction templates
+    that mirror key fields in the Reaction model.
+    """
+    name = models.CharField(max_length=255)  
+    user = models.ForeignKey(
+        'User',  # or your custom user model
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="User who created this template. Null if it is a default template."
+    )
+    is_default = models.BooleanField(
+        default=False,
+        help_text="True for built-in templates; these shouldn't be edited or deleted."
+    )
+
+    substrates = models.TextField(
+        blank=True,
+        null=True,
+        help_text='Comma-separated list of substrates.'
+    )
+    products = models.TextField(
+        blank=True,
+        null=True,
+        help_text='Comma-separated list of products.'
+    )
+    direction = models.TextField(
+        blank=True,
+        null=True,
+        help_text='Reaction direction (e.g. "forward", "bidirectional")'
+    )
+
+    substrates_types = models.TextField(blank=True, null=True)
+    products_types = models.TextField(blank=True, null=True)
+
+    subsystem = models.TextField(blank=True, null=True)
+    subs_comps = models.TextField(blank=True, null=True)
+    prods_comps = models.TextField(blank=True, null=True)
+    subs_sch = models.TextField(blank=True, null=True)
+    prods_sch = models.TextField(blank=True, null=True)
+    Organs = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    def __str__(self):
+        return f"{self.name} (Default: {self.is_default})"

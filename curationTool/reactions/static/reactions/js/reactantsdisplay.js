@@ -26,14 +26,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     }
 
-
-
     setupTooltips();
     createnewreaction();
     createGeneInfoInput();
     setupdate();
     displayreactioninfo(reactionData = null);
-
     attachEventListenersToSelects();
     toggleStructure();
 

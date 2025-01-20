@@ -21,11 +21,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ObjectDoesNotExist
 from .forms import ReactionForm
-from .models import User,CreatedReaction,Reaction,Flag
+from .models import User,CreatedReaction,Reaction,Flag,ReactionTemplate, MetabolitesAddedVMH, ReactionsAddedVMH, Subsystem
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
 from .utils.get_from_rhea import get_from_rhea
-from .models import Reaction, User, MetabolitesAddedVMH, ReactionsAddedVMH, Subsystem,CreatedReaction
 from reactions.reaction_info import get_reaction_info, construct_vmh_formula
 from reactions.utils.process_strings import construct_reaction_string, construct_reaction_rxnfile, get_mol_names
 from reactions.utils.get_mol_info import get_mol_info
@@ -1739,145 +1738,119 @@ def fetch_rhea_rxn(request):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
 @csrf_exempt
-def get_rxn_template(request):
-    """
-    Django view to return substrates and products templates based on the reaction type.
-
-    Input:
-    - request: The Django HTTP request object.
-
-    Output:
-    - JsonResponse: A JsonResponse object containing the substrates and products lists.
-    """
+def create_template(request):
     if request.method == 'POST':
-        data = json.loads(request.body)  # Parse JSON data from request body
-        reaction_type = data.get('reaction_type', '')
+        try:
+            # Parse the form data
+            form_data = request.POST
+            user_id = form_data.get('userID')
+            template_name = form_data.get('template_name')
+            print(form_data)
+            # Ensure user is authenticated
+            if not user_id:
+                return JsonResponse({'status': 'error', 'message': 'User not authenticated.'}, status=403)
 
-        def create_entry(components):
-            substrates = [component if component != 'empty' else 'empty' for component in components['substrates']]
-            subs_sch = ['1' if component != 'empty' else '' for component in components['substrates']]
-            subs_comps = ['-' if component != 'empty' else '' for component in components['substrates']]
-            subs_types = components['subs_types']
-            products = [component if component != 'empty' else 'empty' for component in components['products']]
-            prod_sch = ['1' if component != 'empty' else '' for component in components['products']]
-            prods_comps = ['-' if component != 'empty' else '' for component in components['products']]
-            prods_types = components['prods_types']
+            user = User.objects.get(id=user_id)
+            
+            # Check if template name already exists
+            if ReactionTemplate.objects.filter(name=template_name, user=user).exists():
+                return JsonResponse({'status': 'error', 'message': 'Template name already exists.'}, status=400)
 
-            return {
-                'substrates': substrates,
-                'subs_sch': subs_sch,
-                'subs_comps': subs_comps,
-                'subs_types': subs_types,
-                'products': products,
-                'prod_sch': prod_sch,
-                'prods_comps': prods_comps,
-                'prods_types': prods_types
-            }
+            # Collect the fields for the template
+            substrates = form_data.getlist('substrates')
+            substrates_types = form_data.getlist('substrates_type')
+            subs_comps = form_data.getlist('subs_comps')
+            subs_sch = form_data.getlist('subs_sch')
 
-        reaction_templates = {
-            'hydrolysis': {
-                'substrates': ['empty', 'h2o', 'h'],
-                'subs_types': ['', '', ''],
-                'products': ['empty', 'empty', 'h'],
-                'prods_types': ['', '', '']
-            },
-            'O2NADPHOX': {
-                'substrates': ['empty', 'o2', 'nadph', 'h'],
-                'subs_types': ['', '', '', ''],
-                'products': ['empty', 'h2o', 'nadp'],
-                'prods_types': ['', '', '']
-            },
-            'SULT': {
-                'substrates': ['empty', 'paps'],
-                'subs_types': ['', ''],
-                'products': ['empty', 'pap', 'h'],
-                'prods_types': ['', '', '']
-            },
-            'UGT': {
-                'substrates': ['empty', 'udpglcur'],
-                'subs_types': ['', ''],
-                'products': ['empty', 'udp', 'h'],
-                'prods_types': ['', '', '']
-            },
-            'UGT glucose': {
-                'substrates': ['empty', 'udpg'],
-                'subs_types': ['', ''],
-                'products': ['empty', 'udp', 'h'],
-                'prods_types': ['', '', '']
-            },
-            'UGT carb glucur': {
-                'substrates': ['empty', 'udpglcur', 'co2'],
-                'subs_types': ['', '', ''],
-                'products': ['empty', 'udp', 'h'],
-                'prods_types': ['', '', '']
-            },
-            'CoA': {
-                'substrates': ['empty', 'coa', 'atp'],
-                'subs_types': ['', '', ''],
-                'products': ['empty', 'amp', 'ppi'],
-                'prods_types': ['', '', '']
-            },
-            'FAOXhd': {
-                'substrates': ['empty', 'h2o'],
-                'subs_types': ['', ''],
-                'products': ['empty'],
-                'prods_types': ['']
-            },
-            'FAOXnad': {
-                'substrates': ['empty', 'nad'],
-                'subs_types': ['', ''],
-                'products': ['empty', 'nadh', 'h'],
-                'prods_types': ['', '', '']
-            },
-            'FAOXcoa': {
-                'substrates': ['empty', 'coa'],
-                'subs_types': ['', ''],
-                'products': ['empty', 'accoa'],
-                'prods_types': ['', '']
-            },
-            'Nad ox': {
-                'substrates': ['empty', 'nad'],
-                'subs_types': ['', ''],
-                'products': ['empty', 'nadh', 'h'],
-                'prods_types': ['', '', '']
-            },
-            'NADH red': {
-                'substrates': ['empty', 'nadh', 'h'],
-                'subs_types': ['', '', ''],
-                'products': ['empty', 'nad'],
-                'prods_types': ['', '']
-            },
-            'cycl': {
-                'substrates': ['empty', 'h'],
-                'subs_types': ['', ''],
-                'products': ['empty', 'h2o'],
-                'prods_types': ['', '']
-            },
-            'NADPH red': {
-               'substrates': ['empty', 'nadph', 'h'],
-                'subs_types': ['', '', ''],
-                'products': ['empty', 'nadp'],
-                'prods_types': ['', '']
-            },
-            'AT':{
-                'substrates': ['taur', 'empty'],
-                'subs_types': ['', ''],
-                'products': ['empty', 'coa','h'],
-                'prods_types': ['', '', '']
-            }         
-        }
+            products = form_data.getlist('products')
+            products_types = form_data.getlist('products_type')
+            prods_comps = form_data.getlist('prod_comps')
+            prods_sch = form_data.getlist('prod_sch')
 
-        components = reaction_templates.get(reaction_type, {
-            'substrates': [],
-            'subs_types': [],
-            'products': [],
-            'prods_types': []
-        })
+            direction = form_data.get('direction', 'forward')
+            subsystem = form_data.get('subsystem', 'undefined')
+            organs = json.loads(form_data.get('organs', '[]'))
 
-        result = create_entry(components)
-        return JsonResponse(result)
+            # Create and save the new template
+            template = ReactionTemplate.objects.create(
+                name=template_name,
+                user=user,
+                is_default=False,
+                substrates=','.join(substrates),
+                substrates_types=','.join(substrates_types),
+                subs_comps=','.join(subs_comps),
+                subs_sch=','.join(subs_sch),
+                products=','.join(products),
+                products_types=','.join(products_types),
+                prods_comps=','.join(prods_comps),
+                prods_sch=','.join(prods_sch),
+                direction=direction,
+                subsystem=subsystem,
+                Organs=','.join(organs)
+            )
+
+            user.templates.add(template)
+
+            return JsonResponse({'status': 'success', 'message': 'Template created successfully.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     else:
-        return JsonResponse({'error': 'Invalid request'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=400)
+
+
+@csrf_exempt
+def get_rxn_template(request):
+    if request.method == 'POST':
+        try:
+            # Parse the request body
+            data = json.loads(request.body)
+            reaction_type = data.get('reaction_type', '')
+
+            # Fetch the reaction template by name
+            template = ReactionTemplate.objects.get(name=reaction_type)
+
+            # Prepare the response data
+            result = {
+                'substrates': template.substrates.split(',') if template.substrates else [],
+                'subs_sch': template.subs_sch.split(',') if template.subs_sch else ['1'] * len(template.substrates.split(',')),
+                'subs_comps': template.subs_comps.split(',') if template.subs_comps else ['-'] * len(template.substrates.split(',')),
+                'subs_types': template.substrates_types.split(',') if template.substrates_types else ['vmh'] * len(template.substrates.split(',')),
+                'products': template.products.split(',') if template.products else [],
+                'prod_sch': template.prods_sch.split(',') if template.prods_sch else ['1'] * len(template.products.split(',')),
+                'prods_comps': template.prods_comps.split(',') if template.prods_comps else ['-'] * len(template.products.split(',')),
+                'prods_types': template.products_types.split(',') if template.products_types else ['vmh'] * len(template.products.split(',')),
+                'direction': template.direction,
+                'subsystem': template.subsystem,
+                'Organs': template.Organs.split(',') if template.Organs else []
+            }
+            return JsonResponse(result)
+
+        except ReactionTemplate.DoesNotExist:
+            return JsonResponse({'error': 'Template not found'}, status=404)
+        except KeyError:
+            return JsonResponse({'error': 'Invalid template structure'}, status=400)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+@csrf_exempt
+def list_templates(request):
+    print(request.method)
+    if request.method == 'POST':
+        default_templates = ReactionTemplate.objects.filter(is_default=True).values_list('name', flat=True)
+
+        user_id = json.loads(request.body).get('userID')
+
+        if user_id:
+            user = User.objects.get(id=user_id)
+            user_templates = user.templates.values_list('name', flat=True)
+            templates = list(user_templates) + list(default_templates)
+        else:
+            templates = list(default_templates)
+        templates.sort()  # Optionally sort the combined list
+        
+        return JsonResponse({'templates': templates})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=400)
+
 
         
 def search_reactions(request):
