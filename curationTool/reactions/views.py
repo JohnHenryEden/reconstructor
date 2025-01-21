@@ -574,7 +574,6 @@ def get_reaction(request, reaction_id):
     :param reaction_id: The ID of the reaction to retrieve.
     :return: JsonResponse containing the reaction details or an error message.
     """
-
     try:
         reaction = Reaction.objects.get(pk=reaction_id)
         reaction_data = {

@@ -36,3 +36,17 @@
 .toggle-button:hover {
     background-color: #003755;
 }
+.color-legend {
+    background-color: #333; /* Dark background for good contrast */
+    color: white; /* Text color */
+    padding: 10px;
+    margin-bottom: 1em;
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+
+.color-legend .legend-content span {
+    display: inline-block;
+    width: 20px;
+    text-align: center;
+}

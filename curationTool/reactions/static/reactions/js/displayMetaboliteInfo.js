@@ -12,6 +12,23 @@ function loadMetaboliteInfoDiv(reactionData) {
 function fillMetaboliteInfoTab(data) {
     const metaboliteInfoContainer = document.getElementById('metaboliteinfo-div');
 
+    // Add the legend at the top
+    const legend = document.createElement('div');
+    legend.className = 'color-legend';
+    legend.innerHTML = `
+        <strong>Color Legend:</strong>
+        <div class="legend-content">
+            <span style="color: #00FF00;">■</span> C
+            <span style="color: #FFFFFF; margin-left: 1em;">■</span> H
+            <span style="color: #8F8FFF; margin-left: 1em;">■</span> N
+            <span style="color: #F00000; margin-left: 1em;">■</span> O
+            <span style="color: #FFC832; margin-left: 1em;">■</span> S
+            <span style="color: #FF00FF; margin-left: 1em;">■</span> Unspecified Stereo
+        </div>
+    `;
+    metaboliteInfoContainer.appendChild(legend);
+
+    // Iterate through metabolite data
     data.metabolite_names.forEach((name, index) => {
         const metaboliteDiv = document.createElement('div');
         metaboliteDiv.classList.add('metabolite');
@@ -32,7 +49,6 @@ function fillMetaboliteInfoTab(data) {
                 this.textContent = 'Hide 3D Structure';
         
                 if (!structureContainer.hasAttribute('data-viewer-initialized')) {
-                    // Basic setup
                     structureContainer.style.height = '400px';
                     structureContainer.style.width = '400px';
                     structureContainer.style.position = 'relative';
@@ -42,17 +58,13 @@ function fillMetaboliteInfoTab(data) {
                     let molecularData = data.metabolite_mol_file_strings[index];
                     let format = 'sdf';
         
-                    // Add the molecule model
                     let model = viewer.addModel(molecularData, format);
-        
                     viewer.setStyle({}, { stick: { colorscheme: 'greenCarbon' } });
                     let stereoLocations = data.stereo_locations_list[index];
                     for (const loc of stereoLocations) {
                         viewer.setStyle({ model: model, index: loc }, 
                                         { stick: {color: 'magenta' } });
                     }
-        
-                    // Make atoms clickable if you want labels on click
                     viewer.setClickable({}, true, function(atom, _viewer, _event, _container) {
                         viewer.addLabel(atom.atom, { 
                             position: atom, 
@@ -60,12 +72,8 @@ function fillMetaboliteInfoTab(data) {
                             backgroundOpacity: 0.8 
                         });
                     });
-        
-                    // Zoom and render
                     viewer.zoomTo();
                     viewer.render();
-        
-                    // Mark as initialized so we don't rebuild next time
                     structureContainer.setAttribute('data-viewer-initialized', 'true');
                 }
             } else {
@@ -73,17 +81,15 @@ function fillMetaboliteInfoTab(data) {
                 this.textContent = 'Show 3D Structure';
             }
         };
-        
+
         toggleDiv.appendChild(nameElement);
         toggleDiv.appendChild(toggleButton);
         metaboliteDiv.appendChild(toggleDiv);
-        
-        // Existing formula display
+
         const formulaElement = document.createElement('p');
         formulaElement.textContent = `Charged Formula: ${data.metabolite_formulas[index]}`;
         metaboliteDiv.appendChild(formulaElement);
-        
-        // NEW: Stereo info simplified
+
         const stereoCount = data.stereo_counts[index];
         const stereoCountElement = document.createElement('p');
         if (stereoCount > 0) {
@@ -92,15 +98,13 @@ function fillMetaboliteInfoTab(data) {
             stereoCountElement.textContent = 'No unspecified stereo centers detected.';
         }
         metaboliteDiv.appendChild(stereoCountElement);
-        
-        // Structure container
+
         const structureContainer = document.createElement('div');
         structureContainer.className = 'structure-container';
         structureContainer.style.display = 'none';
         metaboliteDiv.appendChild(structureContainer);
-        
+
         metaboliteInfoContainer.appendChild(metaboliteDiv);
-        
     });
 }
 
