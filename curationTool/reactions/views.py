@@ -1744,7 +1744,6 @@ def create_template(request):
             form_data = request.POST
             user_id = form_data.get('userID')
             template_name = form_data.get('template_name')
-            print(form_data)
             # Ensure user is authenticated
             if not user_id:
                 return JsonResponse({'status': 'error', 'message': 'User not authenticated.'}, status=403)
@@ -1753,7 +1752,7 @@ def create_template(request):
             
             # Check if template name already exists
             if ReactionTemplate.objects.filter(name=template_name, user=user).exists():
-                return JsonResponse({'status': 'error', 'message': 'Template name already exists.'}, status=400)
+                return JsonResponse({'status': 'error', 'message': f'You already have a template named {template_name}.'}, status=400) 
 
             # Collect the fields for the template
             substrates = form_data.getlist('substrates')
@@ -1850,8 +1849,132 @@ def list_templates(request):
     else:
         return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=400)
 
+@csrf_exempt
+def share_template(request):
+    if request.method == 'POST':
+        # Parse the request body
+        data = json.loads(request.body)
+        user_id = data.get('userID')  # The ID of the user sharing the templates
+        share_with_username = data.get('share_with_user')  # The username of the recipient
+        template_names = data.get('template_names', [])  # List of template names to share
 
-        
+        # Ensure all required fields are present
+        if not user_id or not share_with_username or not template_names:
+            return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
+
+        # Fetch the sharing user
+        try:
+            sharing_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Sharing user not found.'}, status=404)
+
+        # Fetch the recipient user by username
+        try:
+            recipient_user = User.objects.get(name=share_with_username)
+        except User.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Recipient user not found.'}, status=404)
+
+        # Get templates from user object instead
+        templates_to_share = sharing_user.templates.filter(name__in=template_names)
+
+        # Handle conflicts and add templates 
+        for template in templates_to_share:
+            if template in recipient_user.templates.all():
+                return JsonResponse({'status': 'error', 'message': f'Template {template.name} already exists for the recipient.'}, status=400)
+            # Check if the recipient already has a template with the same name
+            if ReactionTemplate.objects.filter(user=recipient_user, name=template.name).exists():
+                # Generate a unique name for the new template
+                base_name = template.name
+                counter = 1
+                new_name = f"{base_name}{counter}"
+                while ReactionTemplate.objects.filter(user=recipient_user, name=new_name).exists():
+                    counter += 1
+                    new_name = f"{base_name}{counter}"
+
+                # Create a new template with the modified name for the recipient
+                new_template = ReactionTemplate.objects.create(
+                    name=new_name,
+                    user=recipient_user,
+                    is_default=False,
+                    substrates=template.substrates,
+                    products=template.products,
+                    direction=template.direction,
+                    substrates_types=template.substrates_types,
+                    products_types=template.products_types,
+                    subsystem=template.subsystem,
+                    subs_comps=template.subs_comps,
+                    prods_comps=template.prods_comps,
+                    subs_sch=template.subs_sch,
+                    prods_sch=template.prods_sch,
+                    Organs=template.Organs,
+                )
+                recipient_user.templates.add(new_template)
+            else:
+                # Add the original template to the recipient if there's no conflict
+                recipient_user.templates.add(template)
+
+        return JsonResponse({'status': 'success', 'message': 'Templates shared successfully.'}, status=200)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=400)
+@csrf_exempt
+def rename_template(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            old_name = data.get('old_name')
+            new_name = data.get('new_name')
+            userID = data.get('userID')
+            if not userID:
+                return JsonResponse({'status': 'error', 'message': 'Login required.'}, status=403)
+            user = User.objects.get(id=userID)
+            user_templates = User.objects.get(id=userID).templates
+
+            if not old_name or not new_name:
+                return JsonResponse({'status': 'error', 'message': 'Missing required fields.'}, status=400)
+
+            template = ReactionTemplate.objects.get(name=old_name)
+            user_templates.remove(template)
+            template.pk = None
+
+            # Check if a template with the new name already exists
+            if ReactionTemplate.objects.filter(name=new_name, user=template.user).exists():
+                return JsonResponse({'status': 'error', 'message': f'A template named {new_name} already exists.'}, status=400)
+            # Rename the template
+            template.name = new_name
+            template.save()
+            # Add the renamed template
+            user_templates.add(template)
+            user.save()
+            return JsonResponse({'status': 'success', 'message': 'Template renamed successfully.'})
+        except ReactionTemplate.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Template not found.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=400)
+
+@csrf_exempt
+def delete_template(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            template_name = data.get('template_name')
+            userID = data.get('userID')
+            user = User.objects.get(id=userID)
+            if not userID:
+                return JsonResponse({'status': 'error', 'message': 'Login required.'}, status=403)
+            user_templates = User.objects.get(id=userID).templates
+            # remove the template from the user's templates
+            user_templates.remove(ReactionTemplate.objects.get(name=template_name))
+            user.save() 
+            return JsonResponse({'status': 'success', 'message': 'Template deleted successfully.'})
+        except ReactionTemplate.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Template not found.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=400)
+
 def search_reactions(request):
     user = request.user
     query = request.GET.get('q', '')

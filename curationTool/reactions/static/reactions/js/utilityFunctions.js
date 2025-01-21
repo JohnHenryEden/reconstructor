@@ -14,3 +14,33 @@ function getDistinctColors(count) {
     }
     return colors;
 }
+
+window.ReactionUtils = window.ReactionUtils || {};
+
+window.ReactionUtils.fetchTemplates = async function (templateList, templatesFetched) {
+    if (templatesFetched.value) return;
+    try {
+        const userID = sessionStorage.getItem('userID');
+        console.log(userID);
+        const response = await fetch('/list_templates/', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userID: userID }),
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            templateList.length = 0; // Clear existing list
+            templateList.push(...data.templates); // Add new templates
+            templatesFetched.value = true;
+        } else {
+            console.error('Failed to fetch templates');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};

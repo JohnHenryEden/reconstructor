@@ -21,10 +21,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css">    
     <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
-    
-
-
-
 </head>
 <body>
     <div class="custom-error-modal" id="error-modal">
@@ -326,7 +322,13 @@
                 </div>
                 <div class="ui modal getrxntemplate" id="getrxnfromtemplateModal">
                     <i class="close icon"></i>
-                    <div class="header">Select Reaction Template</div>
+                    <div class="header">
+                        Select Reaction Template
+                        <div class="ui buttons" style="float: right; gap: 4px;">
+                            <button class="ui button" id="manageTemplateBtn">Manage Templates</button>
+                            <button class="ui button" id="createTemplateBtn">Create New Template</button>
+                        </div>
+                      </div>
                     <div class="content">
                         <div class="ui form">
                             <div class="field">
@@ -337,10 +339,68 @@
                         </div>
                     </div>
                     <div class="actions">
-                        <button class="ui button" id="createTemplateBtn">Create New Template</button>
                         <button class="ui button" id="applyTemplate">Apply</button>
                     </div>
                 </div>
+                <div class="ui modal manageTemplates" id="manageTemplatesModal">
+                    <i class="close icon"></i>
+                    <div class="header">Manage Templates</div>
+                    <div class="content">
+                        <div class="ui buttons template-buttons">
+                            <!-- Button to open the Share Templates Modal -->
+                            <button class="ui button" id="shareTemplateBtn">Share Templates</button>
+                            
+                            <!-- Button for Edit Templates functionality -->
+                            <button class="ui button" id="editTemplateBtn">Edit Templates</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Edit Templates Modal -->
+                <div class="ui modal editTemplate" id="editTemplateModal">
+                    <i class="close icon"></i>
+                    <div class="header">Edit Templates</div>
+                    <div class="content">
+                        <div class="ui form">
+                            <div class="field">
+                                <label for="editTemplates">Select a Template to Edit:</label>
+                                <div id="editTemplatesContainer" class="template-selection-container">
+                                    <!-- Templates will be dynamically added here as clickable buttons -->
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label for="newTemplateName">Rename Template:</label>
+                                <input type="text" id="newTemplateName" placeholder="Enter new template name" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="actions editTemplateActions">
+                        <button class="ui button" id="renameTemplateBtn">Rename</button>
+                        <button class="ui red button" id="deleteTemplateBtn">Delete</button>
+                    </div>
+                </div>
+                <div class="ui modal shareTemplate" id="shareTemplateModal">
+                    <i class="close icon"></i>
+                    <div class="header">Share Templates</div>
+                    <div class="content">
+                        <div class="ui form">
+                            <div class="field">
+                                <label for="shareTemplates">Select Templates to share:</label>
+                                <!-- Custom multi-select container -->
+                                <div id="shareTemplatesContainer" class="template-selection-container">
+                                    <!-- Templates will be dynamically added here as clickable buttons -->
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label for="shareWithUser">Username of the user to share with:</label>
+                                <input type="text" id="shareWithUser" placeholder="Enter username" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button class="ui button" id="confirmShare">Share</button>
+                    </div>
+                </div>                
+                
                 <div class="content-div" name="atommapping-div" style="display: none;">
                     <div class="div-header">Atom Mapping</div>
                     <img src="{{ MEDIA_URL }}images/placeholder_image.png" id="atomMappingImage" class="reaction-image">
@@ -698,6 +758,7 @@
     <script src="{% static 'reactions/js/reactantsformHandling.js' %}"></script>
     <script src="{% static 'reactions/js/getrxnfromtemplate.js' %}"></script>
     <script src="{% static 'reactions/js/createTemplate.js' %}"></script>
+    <script src="{% static 'reactions/js/shareEditTemplate.js' %}"></script>
     <script src="{% static 'reactions/js/ReactantsinputFieldManagement.js' %}"></script>
     <script src="{% static 'reactions/js/reactantsdisplay.js' %}"></script>  
     <script src="{% static 'reactions/js/chemdoodleIntegration.js' %}"></script>
@@ -709,11 +770,5 @@
     <script src="{% static 'reactions/lib/blowup.js' %}"></script>  
     <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-
-    
-
-
-
-
 </body>
 </html>

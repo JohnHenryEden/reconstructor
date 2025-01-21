@@ -62,4 +62,7 @@ urlpatterns = [
     path('user_saved_reaction_ids/', views.get_user_saved_reaction_ids, name='get_user_saved_reaction_ids'),
     path('list_templates/', views.list_templates, name='list_templates'),
     path('create_template/', views.create_template, name='create_template'),
+    path('share_template/', views.share_template, name='share_template'),
+    path('rename_template/', views.rename_template, name='rename_template'),
+    path('delete_template/', views.delete_template, name='delete_template'),
     ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

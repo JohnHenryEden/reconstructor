@@ -692,3 +692,46 @@ footer {
 #customDropdown{
     width: 50%;
 }
+
+.template-selection-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    max-height: 200px; /* Optional: limit height */
+    overflow-y: auto; /* Enable scrolling for many templates */
+}
+
+.template-button {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #ffffff;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.template-button:hover {
+    background-color: #f1f1f1;
+    border-color: #bbb;
+}
+
+.template-button.selected {
+    background-color: #007bff;
+    color: #fff;
+    border-color: #007bff;
+}
+.template-buttons {
+    gap: 10px;
+}
+.editTemplateActions{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-top: 12px;
+}

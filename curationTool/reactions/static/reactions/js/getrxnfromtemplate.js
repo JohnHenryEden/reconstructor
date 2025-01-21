@@ -2,37 +2,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const modalButton = document.getElementById('getrxnfromtemplateBtn');
     const reactionField = document.getElementById('reactionField'); 
     const reactionDropdown = document.getElementById('reactionDropdown');
-    let reactionList = [];
-    let templatesFetched = false; // Track if templates have been fetched
-
-    // Fetch the list of templates
-    async function fetchTemplates() {
-        if (templatesFetched) return; // Fetch only once
-        try {
-            userID = sessionStorage.getItem('userID');
-            console.log(userID);
-            // send the user ID if logged in
-            const response = await fetch('/list_templates/', {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 'userID': userID })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                reactionList = data.templates;
-                templatesFetched = true; // Mark as fetched
-            } else {
-                console.error('Failed to fetch templates');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    }
+    let templateList = [];
+    let templatesFetched = { value: false }; // Mutable tracking
 
     // Populate dropdown with available templates
     function populateDropdown(list) {
@@ -51,13 +22,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Show dropdown on input click
     reactionField.addEventListener('click', function () {
-        populateDropdown(reactionList); // Show the full list on click
+        populateDropdown(templateList); // Show the full list on click
     });
 
     // Filter dropdown based on user input
     reactionField.addEventListener('keyup', function () {
         const inputVal = this.value.toLowerCase();
-        const matches = reactionList.filter(template => template.toLowerCase().includes(inputVal));
+        const matches = templateList.filter(template => template.toLowerCase().includes(inputVal));
         populateDropdown(matches);
     });
 
@@ -68,16 +39,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Show modal and fetch templates
     modalButton.addEventListener('click', async function () {
         $('#getrxnfromtemplateModal').modal('show');
-        await fetchTemplates(); // Fetch templates when modal is opened
+        await window.ReactionUtils.fetchTemplates(templateList, templatesFetched);
     });
 
     // Apply selected template
     document.getElementById('applyTemplate').addEventListener('click', async function () {
         const selectedValue = reactionField.value;
-        if (!reactionList.includes(selectedValue)) {
+        if (!templateList.includes(selectedValue)) {
             alert('Please select a valid template from the dropdown.');
             return;
         }
