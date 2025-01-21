@@ -1144,7 +1144,7 @@ def prepare_add_to_vmh(request):
                     need_new_name = is_name_in_vmh(json.loads(reaction_objs[idx].products_names)[j])
                     prods_need_new_names[idx].append(need_new_name)
 
-        reaction_abbrs = [gen_reaction_abbr(sub_abbr, prod_abbr, reaction) for sub_abbr, prod_abbr, reaction in zip(subs_abbr, prods_abbr, reaction_objs)]
+        reaction_abbrs = ['' for _ in reactionIds]
 
         return JsonResponse({
             'status': 'success',
