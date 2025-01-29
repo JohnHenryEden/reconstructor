@@ -166,11 +166,30 @@ function appendVMHFormulaSection(contentDiv, reactionData) {
     }
 
     formulaDisplay.addEventListener('click', () => {
-        navigator.clipboard.writeText(formulaDisplay.textContent).then(() => {
-            showToast('Formula copied to clipboard!');
-        });
+        const text = formulaDisplay.textContent;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            // Use the Clipboard API if available
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Formula copied to clipboard!');
+            }).catch(err => {
+                console.error('Could not copy text: ', err);
+            });
+        } else {
+            // Fallback for browsers that do not support the Clipboard API
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Formula copied to clipboard!');
+            } catch (err) {
+                console.error('Could not copy text: ', err);
+            }
+            document.body.removeChild(textarea);
+        }
     });
-    
+        
     formulaSection.appendChild(formulaDisplay);
 
     const generateAbbrButton = document.createElement('button');
