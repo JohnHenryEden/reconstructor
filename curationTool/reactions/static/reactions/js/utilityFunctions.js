@@ -44,3 +44,35 @@ window.ReactionUtils.fetchTemplates = async function (templateList, templatesFet
         console.error('Error:', error);
     }
 };
+
+// Function to show a toast notification
+function showToast(message) {
+    // Create the toast container
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.right = '20px';
+    toast.style.backgroundColor = '#4caf50'; // Success green
+    toast.style.color = '#fff';
+    toast.style.padding = '10px 20px';
+    toast.style.borderRadius = '8px';
+    toast.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+    toast.style.fontSize = '14px';
+    toast.style.zIndex = '1000';
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.5s ease';
+
+    document.body.appendChild(toast);
+
+    // Fade in the toast
+    setTimeout(() => {
+        toast.style.opacity = '1';
+    }, 10);
+
+    // Fade out and remove the toast after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 500); // Remove after fade-out
+    }, 3000);
+}

@@ -53,7 +53,6 @@ document.getElementById('reactionForm').addEventListener('submit', function(e) {
     for (var i = 0; i < inputsGroups.length; i++) {
         var group = inputsGroups[i];
         var statusDot = group.querySelector('.status-dot');
-        console.log('Status dot:', statusDot);
         if (statusDot.style.display === 'none') {
             var errorMessage = 'Verify all metabolites before creating reaction.';
             showErrorModal(errorMessage);

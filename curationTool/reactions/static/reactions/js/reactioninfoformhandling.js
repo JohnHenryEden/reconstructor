@@ -116,7 +116,6 @@ function setupSubmitHandler(submitButtonId, Infotextid) {
             .then(response => {
                 if (response.processed_string) {
                     data.infoText = response.processed_string;
-                    console.log(data);
                     AddOrganLocation(data);
                 } else {
                     if (response.error) {

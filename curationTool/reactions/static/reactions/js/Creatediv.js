@@ -59,4 +59,5 @@ document.addEventListener('DOMContentLoaded', function() {
         // Open the About page in a new tab
         window.open(aboutUrl, '_blank');
     });
+    
 });

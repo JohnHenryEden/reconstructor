@@ -436,8 +436,6 @@ async function updateFormFields(data) {
     
     let promises = [];
 
-    // Create substrate fields with correct type
-    console.log(data);
     if (data.substrates_names) {
         data.substrates.forEach((substrate, index) => {
             if (substrate === 'empty') {

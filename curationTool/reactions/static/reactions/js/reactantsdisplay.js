@@ -51,8 +51,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 await updateFormFields(reactionData);
                 confirmAll();
                 displayDivs(reactionData);
-                console.log(reactionData.short_name );
-                if(reactionData.short_name !== undefined){
+                if (reactionData.short_name) {
                     if(reactionData.short_name.length>20){
                         reactionData = reactionData.short_name.substring(0, 30) + "...";
                         setLoggedInStatusBasedOnUrl(reactionData);

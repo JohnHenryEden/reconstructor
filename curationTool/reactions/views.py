@@ -2026,13 +2026,12 @@ def get_user_reactions_and_vmh(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
     
-
+@csrf_exempt
 def create_reaction(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         user_id = data.get('user_id')
         reaction_id = data.get('reaction_id')
-        
         # Validate the user ID using the provided function
         user = validate_user_ID(user_id)
         
@@ -2043,8 +2042,6 @@ def create_reaction(request):
         reaction = get_object_or_404(Reaction, id=reaction_id)
         
         created_reaction = CreatedReaction.objects.create(user=user, reaction=reaction)
-        
-        
         return JsonResponse({'success': True, 'created_reaction_id': created_reaction.id})
     else:
         return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)

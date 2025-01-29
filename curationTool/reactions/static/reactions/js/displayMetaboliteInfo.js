@@ -60,10 +60,13 @@ function fillMetaboliteInfoTab(data) {
         
                     let model = viewer.addModel(molecularData, format);
                     viewer.setStyle({}, { stick: { colorscheme: 'greenCarbon' } });
-                    let stereoLocations = data.stereo_locations_list[index];
-                    for (const loc of stereoLocations) {
-                        viewer.setStyle({ model: model, index: loc }, 
-                                        { stick: {color: 'magenta' } });
+                    if (data.stereo_locations_list) {
+
+                        let stereoLocations = data.stereo_locations_list[index];
+                        for (const loc of stereoLocations) {
+                            viewer.setStyle({ model: model, index: loc }, 
+                                            { stick: {color: 'magenta' } });
+                        }
                     }
                     viewer.setClickable({}, true, function(atom, _viewer, _event, _container) {
                         viewer.addLabel(atom.atom, { 
@@ -89,15 +92,18 @@ function fillMetaboliteInfoTab(data) {
         const formulaElement = document.createElement('p');
         formulaElement.textContent = `Charged Formula: ${data.metabolite_formulas[index]}`;
         metaboliteDiv.appendChild(formulaElement);
+        // check if data has stereo_counts and stereo_locations_list
+        if (data.stereo_counts || data.stereo_locations_list) {
 
-        const stereoCount = data.stereo_counts[index];
-        const stereoCountElement = document.createElement('p');
-        if (stereoCount > 0) {
-            stereoCountElement.textContent = `Number of unspecified Stereo Centers: ${stereoCount} (magenta in the 3D viewer)`;
-        } else {
-            stereoCountElement.textContent = 'No unspecified stereo centers detected.';
+            const stereoCount = data.stereo_counts[index];
+            const stereoCountElement = document.createElement('p');
+            if (stereoCount > 0) {
+                stereoCountElement.textContent = `Number of unspecified Stereo Centers: ${stereoCount} (magenta in the 3D viewer)`;
+            } else {
+                stereoCountElement.textContent = 'No unspecified stereo centers detected.';
+            }
+            metaboliteDiv.appendChild(stereoCountElement);
         }
-        metaboliteDiv.appendChild(stereoCountElement);
 
         const structureContainer = document.createElement('div');
         structureContainer.className = 'structure-container';
