@@ -1,49 +1,65 @@
 // saved_reactions.js
 
+async function checkAndSaveReaction() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const reactionId = urlParams.get('reaction_id');
+    const userId = sessionStorage.getItem('userID');
+
+    if (!reactionId) {
+        alert('Reaction not created.');
+        return;
+    }
+    try {
+        let response = await fetch(alreadySavedURL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ user_id: userId, reaction_id: reactionId })
+        });
+
+        const data = await response.json();
+
+        if (data.is_reaction_saved) {
+            alert('Reaction is already saved.');
+        } else {
+            var modal = document.getElementById('saveReactionModal');
+            modal.style.display = 'block';
+            document.getElementById('modalBackground').style.display = 'block';
+
+            if (!flagsLoaded) {
+                loadFlags();
+            }
+        }
+    } catch (error) {
+        console.error('Error checking reaction:', error);
+    }
+}
+async function reactionNameExists(shortName, userId) {
+    try {
+        const response = await fetch(reactionNameExistsURL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ short_name: shortName, user_id: userId })
+        });
+
+        const data = await response.json();
+        return data.is_name_saved;
+    } catch (error) {
+        console.error('Error checking reaction name:', error);
+        return false;
+    }
+}
 document.addEventListener('DOMContentLoaded', function () {
     const saveReactionButton = document.getElementById('saveReactionButton');
 
-    async function checkAndSaveReaction() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const reactionId = urlParams.get('reaction_id');
-        const userId = sessionStorage.getItem('userID');
-
-        if (!reactionId) {
-            alert('Reaction not created.');
-            return;
-        }
-
-        const url = `/check-reaction`;
-
-        try {
-            let response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify({ user_id: userId, reaction_id: reactionId })
-            });
-
-            const data = await response.json();
-
-            if (data.is_reaction_saved) {
-                alert('Reaction is already saved.');
-            } else {
-                var modal = document.getElementById('saveReactionModal');
-                modal.style.display = 'block';
-                document.getElementById('modalBackground').style.display = 'block';
-
-                if (!flagsLoaded) {
-                    loadFlags();
-                }
-            }
-        } catch (error) {
-            console.error('Error checking reaction:', error);
-        }
-    }
-    document.getElementById('submitSaveReaction').addEventListener('click', function () {
+    document.getElementById('submitSaveReaction').addEventListener('click', async function () {
         const userID = sessionStorage.getItem('userID');
         const urlParams = new URLSearchParams(window.location.search);
         const reactionId = urlParams.get('reaction_id');
@@ -53,15 +69,6 @@ document.addEventListener('DOMContentLoaded', function () {
         let flagName = flagNameElement.textContent.trim();
         const flagIcon = flagNameElement.querySelector('i');
         let flagColor = flagIcon ? flagIcon.style.color : '';
-    
-        // Ensure the rgbToHex function is defined
-        function rgbToHex(rgb) {
-            const result = rgb.match(/\d+/g);
-            const r = parseInt(result[0]).toString(16).padStart(2, '0');
-            const g = parseInt(result[1]).toString(16).padStart(2, '0');
-            const b = parseInt(result[2]).toString(16).padStart(2, '0');
-            return `#${r}${g}${b}`;
-        }
     
         // Convert the color if available
         flagColor = flagColor ? rgbToHex(flagColor) : '';
@@ -82,7 +89,15 @@ document.addEventListener('DOMContentLoaded', function () {
             data.append('short_name', shortName);
             data.append('flag_name', flagName);
             data.append('flag_color', flagColor);
-    
+            const nameExists = await reactionNameExists(shortName, userID);
+            if (nameExists) {
+                const userConfirmation = confirm(
+                    'Reaction name already exists. Are you sure you want to continue? \nYou will have two reactions with the same name.'
+                );
+                if (!userConfirmation) {
+                    return; // Prevent form submission and keep the modal open
+                }
+            }            
             fetch(saveReaction, { // Ensure the correct URL endpoint here
                 method: 'POST',
                 headers: {

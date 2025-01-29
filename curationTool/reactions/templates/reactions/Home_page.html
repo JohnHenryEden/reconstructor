@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Curation Tool — Home</title>
+    <title>Constructor — Home</title>
     <link rel="stylesheet" type="text/css" href="{% static 'reactions/Home_page.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'reactions/reactants.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'reactions/reactioninfo.css' %}">
@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="{% static 'reactions/metabolite-div.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'reactions/register_modal.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'reactions/ask_ai.css' %}">
-    <link rel="shortcut icon" type="image/x-icon" href="{% static 'reactions/favicon_top.ico' %}">
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'reactions/favicon.ico' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -734,6 +734,8 @@
         var getDOIInfo = "{% url 'get_doi_info' '__DOI__' %}".replace('__DOI__', '%s');
         var aboutUrl = "{% url 'about' %}";
         var getAIresponse = "{% url 'get_ai_response' %}";
+        var alreadySavedURL = "{% url 'already_saved' %}";
+        var reactionNameExistsURL = "{% url 'reaction_name_exists' %}";
         var subsystemList = [];
     </script>
     <script type="text/javascript"> var MEDIA_URL = '{{ MEDIA_URL }}';</script>

@@ -1677,7 +1677,7 @@ def get_user_saved_reaction_ids(request):
 
 
 @csrf_exempt
-def is_reaction_in_user_saved_reactions(request):
+def already_saved(request):
     """Check if the given reaction_id is in the user's saved reactions."""
     if request.method == 'POST':
         try:
@@ -1695,8 +1695,25 @@ def is_reaction_in_user_saved_reactions(request):
             return JsonResponse({'error': 'User does not exist'}, status=404)
         except (KeyError, ValueError):
             return JsonResponse({'error': 'Invalid data'}, status=400)
+        
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+@csrf_exempt
+def reaction_name_exists(request):
+    # Check if the given reaction name already exists in the users saved reactions
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_id = data.get('user_id')
+            reaction_name = data.get('short_name')
+            user = User.objects.get(pk=user_id)
+            saved_reaction_names = list(user.saved_reactions.all().values_list('short_name', flat=True))
+            is_name_saved = reaction_name in saved_reaction_names
+            return JsonResponse({'is_name_saved': is_name_saved})
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'User does not exist'}, status=404)
+        except (KeyError, ValueError):
+            return JsonResponse({'error': 'Invalid data'}, status=400)
 
 def get_available_reactions(request):
     """Return the IDs of available reactions for the given user."""
@@ -2121,34 +2138,6 @@ def parse_formula_with_compartments(request):
         return JsonResponse({'detailed_formulas': detailed_formulas})
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
-
-@csrf_exempt
-def convert_to_smiles(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        substrates = [item for item in data if item['side'] == 'substrate']
-        products = [item for item in data if item['side'] == 'product']
-        
-        substrates_mols = [substrate['mol'] for substrate in substrates]
-        substrates_types = [substrate['type'] for substrate in substrates]
-        
-        products_mols = [product['mol'] for product in products]
-        products_types = [product['type'] for product in products]
-        
-        substrates_smiles, substrates_errors = any_to_smiles(substrates_mols, substrates_types, request, side='substrates')
-        products_smiles, products_errors = any_to_smiles(products_mols, products_types, request, side='products')
-        
-        response_data = {
-            'substrates_smiles': substrates_smiles,
-            'substrates_errors': substrates_errors,
-            'products_smiles': products_smiles,
-            'products_errors': products_errors
-        }
-        
-        return JsonResponse(response_data)
-    else:
-        return JsonResponse({'error': 'Invalid request method'}, status=400)
-
 
 @csrf_exempt  # Use csrf_exempt if CSRF token isn't being managed
 def save_formula(request):

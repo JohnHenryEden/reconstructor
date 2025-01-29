@@ -70,3 +70,11 @@ function setButtonState(isDisabled) {
         confirmButton.disabled = false;
     }
 }
+
+function rgbToHex(rgb) {
+    const result = rgb.match(/\d+/g);
+    const r = parseInt(result[0]).toString(16).padStart(2, '0');
+    const g = parseInt(result[1]).toString(16).padStart(2, '0');
+    const b = parseInt(result[2]).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`;
+}

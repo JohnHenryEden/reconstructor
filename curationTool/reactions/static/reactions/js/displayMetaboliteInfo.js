@@ -18,11 +18,11 @@ function fillMetaboliteInfoTab(data) {
     legend.innerHTML = `
         <strong>Color Legend:</strong>
         <div class="legend-content">
-            <span style="color: #00FF00;">■</span> C
+            <span style="color: #C8C8C8;">■</span> C
             <span style="color: #FFFFFF; margin-left: 1em;">■</span> H
-            <span style="color: #8F8FFF; margin-left: 1em;">■</span> N
-            <span style="color: #F00000; margin-left: 1em;">■</span> O
-            <span style="color: #FFC832; margin-left: 1em;">■</span> S
+            <span style="color: #FF0D0D; margin-left: 1em;">■</span> O
+            <span style="color: #3050F8; margin-left: 1em;">■</span> N
+            <span style="color: #FFFF30; margin-left: 1em;">■</span> S
             <span style="color: #FF00FF; margin-left: 1em;">■</span> Unspecified Stereo
         </div>
     `;
@@ -59,7 +59,10 @@ function fillMetaboliteInfoTab(data) {
                     let format = 'sdf';
         
                     let model = viewer.addModel(molecularData, format);
-                    viewer.setStyle({}, { stick: { colorscheme: 'greenCarbon' } });
+                    viewer.setStyle({}, {
+                        stick: { radius: 0.15, colorscheme: 'Jmol' },
+                        sphere: { scale: 0.25, colorscheme: 'Jmol' }
+                    });                    
                     if (data.stereo_locations_list) {
 
                         let stereoLocations = data.stereo_locations_list[index];

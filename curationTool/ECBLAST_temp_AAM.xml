@@ -2,7 +2,7 @@
 <EC_BLAST>
   <ANNOTATION>
     <MAPPING STATUS="SELECTED">
-      <AAM>[OH:1][C:2](=[O:3])[CH:5]([N:6]=[C:8]([OH:10])[CH:11]([N:13]=[C:15]([O-:16])[CH3:17])[CH2:21][C:4](=[O:7])[O-:9])[CH2:12][CH2:14][C:18](=[O:19])[O-:20].[O:22]=[O:23].[O:24]=[O:25]&gt;&gt;[C:15]([O-:16])([CH3:17])=[N:13][CH:11]([C:8](=[N:6][CH:5]([C:2]([OH:1])=[O:3])[CH2:12][CH2:14][C:18](=[O:19])[O-:20])[OH:10])[CH2:21][C:4](=[O:7])[O-:9].[O:24]=[O:25].[O:22]=[O:23]</AAM>
+      <AAM>[OH:1][CH:3]1[O:4][CH:6]([CH:8]([OH:10])[CH:12]([OH:2])[CH:5]1[OH:7])[CH2:9][OH:11]&gt;&gt;[OH:7][CH:5]1[CH:3]([OH:1])[O:4][CH:6]([CH:8]([OH:10])[CH:12]1[OH:2])[CH2:9][OH:11]</AAM>
       <RANK_REACTANT>{}</RANK_REACTANT>
       <RANK_PRODUCT>{}</RANK_PRODUCT>
     </MAPPING>

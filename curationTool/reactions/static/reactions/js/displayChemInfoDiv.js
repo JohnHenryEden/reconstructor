@@ -325,6 +325,7 @@ uniqueNotFoundMetabolites.forEach((details, name) => {
         })
             .then((response) => response.json())
             .then((data) => {
+                console.log(data);
                 if (data.abbr) {
                     hideLoaderdiv(generateButton, closeButton); // Pass the closeButton
     

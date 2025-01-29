@@ -19,14 +19,13 @@ document.getElementById('close-button').onclick = function() {
 document.getElementById('reactionForm').addEventListener('submit', function(e) {
     var loadingIndicator = document.getElementById('loadingIndicator');
 
-
     e.preventDefault(); // Prevent the default form submission
 
     var submitBtn = document.getElementById('submitBtn-form');
     currentUrl = window.location.href;
     if (currentUrl.includes('edit')) {
         // pop up that says "are you sure you want to update this reaction?"
-        var userConfirmed = confirm('Are you sure you want to update this reaction?');
+        var userConfirmed = confirm('Are you sure you want to update your saved reaction? This action cannot be undone.');
         if (!userConfirmed) {
             return; // Exit the function and do not submit form
         }
@@ -34,12 +33,9 @@ document.getElementById('reactionForm').addEventListener('submit', function(e) {
 
     var loadingIndicator = document.getElementById('loadingIndicator');
 
-
-
     var divElement = document.getElementById("organTags");
     var organTags = Array.from(divElement.getElementsByClassName('tag'))
                             .map(tag => tag.firstChild.textContent.trim());
-
 
     // Check if the subsystem field is filled
     var subsystemField = document.getElementById('subsystemField').value;
@@ -60,7 +56,6 @@ document.getElementById('reactionForm').addEventListener('submit', function(e) {
             return
         }
     }
-    
 
     var isValidSubsystem = subsystemList.some(subsystem => subsystem.toLowerCase() === subsystemField.toLowerCase());
 
@@ -85,7 +80,6 @@ document.getElementById('reactionForm').addEventListener('submit', function(e) {
             }
         }
     }
-
     // Continue with form submission
 
     const disabledInputs = this.querySelectorAll('input:disabled, select:disabled');

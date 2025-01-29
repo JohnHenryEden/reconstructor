@@ -46,9 +46,9 @@ def gen_metabolite_abbr(metabolite, mtype,metabolite_name,search_func, matlab_se
     if found:
         return abbr
     else:   
-        print('Generating abbr for ',metabolite_name)  
         result = matlab_session.execute('generateVMHMetAbbr',metabolite_name)
         abbr = result['result'] if result['status'] == 'success' else metabolite_name
+        # abbr = abbr[-1] if isinstance(abbr, list) else abbr
         exists = check_met_abbr_exists(abbr)
         while exists:
             abbr = abbr + '_'
