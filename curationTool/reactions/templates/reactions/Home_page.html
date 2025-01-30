@@ -297,6 +297,16 @@
                         </div>
                     </div>
                 </div>
+                <div id="identicalReactionModal" class="ui modal identicalReactionModal">
+                    <i class="close icon"></i>
+                    <div class="header">Identical Reaction Found</div>
+                    <div class="content">
+                        <p id="identicalReactionMessage"></p>
+                    </div>
+                    <div class="actions">
+                        <button id="createReactionButton" class="ui button">Create</button>
+                    </div>
+                </div>                
                 <div class = "ui modal getrxnfromvmhrhea">
                     <i class="close icon"></i>
                     <div class="header">Reaction Input</div>
@@ -736,6 +746,7 @@
         var getAIresponse = "{% url 'get_ai_response' %}";
         var alreadySavedURL = "{% url 'already_saved' %}";
         var reactionNameExistsURL = "{% url 'reaction_name_exists' %}";
+        var identicalReactionUrl = "{% url 'identical_reaction' %}";
         var subsystemList = [];
     </script>
     <script type="text/javascript"> var MEDIA_URL = '{{ MEDIA_URL }}';</script>

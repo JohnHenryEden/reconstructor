@@ -1,6 +1,7 @@
 import requests
 import re
 
+
 def get_from_rhea(reaction_abbreviation):
     BASE_URL = 'https://www.rhea-db.org/rhea/?'
     params = {
@@ -15,7 +16,8 @@ def get_from_rhea(reaction_abbreviation):
     response = requests.get(BASE_URL, params=params)
 
     if response.status_code != 200:
-        return {"error": f"Failed to fetch data from API. Status code: {response.status_code}"}
+        return {
+            "error": f"Failed to fetch data from API. Status code: {response.status_code}"}
 
     data = response.text
 

@@ -3,7 +3,6 @@ document.getElementById('subsystemField').addEventListener('keyup', function(eve
     const inputVal = this.value.toLowerCase();
     const dropdown = document.getElementById('subsystemDropdown');
     dropdown.innerHTML = ''; // Clear current dropdown content
-
     const matches = subsystemList.filter(subsystem => subsystem.toLowerCase().includes(inputVal));
 
     matches.forEach(match => {

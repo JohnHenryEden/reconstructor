@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from reactions.models import ReactionTemplate
 
+
 class Command(BaseCommand):
     """
     Management command to load all default reaction templates into the database.
@@ -198,4 +199,5 @@ class Command(BaseCommand):
                 user=None,
                 defaults=template_data
             )
-        self.stdout.write(self.style.SUCCESS('All default templates loaded successfully!'))
+        self.stdout.write(self.style.SUCCESS(
+            'All default templates loaded successfully!'))

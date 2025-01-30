@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const reactionSelect = document.getElementById('reactionSelect');
     const reactionInput = document.getElementById('reactionAbbreviation');
     const submitButton = document.getElementById('submitButton');
-    const cancelButton = document.getElementById('cancel-getrxnfromvmhrhea-button');
 
     $('#getrxnfromvmhrhea').click(function() {
         $('.ui.modal.getrxnfromvmhrhea').modal('show');

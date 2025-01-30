@@ -86,6 +86,9 @@ async function createTemplate() {
         alert('Please enter a subsystem.');
         return;
     }
+    if (subsystemList.length === 0) {
+        subsystemList = await updateSubsystems();
+    }   
 
     const isValidSubsystem = subsystemList.some(subsystem => subsystem.toLowerCase() === subsystemField.toLowerCase());
     if (!isValidSubsystem) {

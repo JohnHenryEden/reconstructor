@@ -4,6 +4,7 @@ from rdkit.Chem import AllChem
 from reactions.reaction_info import calculate_total_charge
 from reactions.utils.to_mol import smiles_with_explicit_hydrogens
 
+
 def get_mol_info(mols):
     formulas, charges, mol_file_strings = [], [], []
     stereo_counts, stereo_locations_list = [], []
@@ -41,7 +42,8 @@ def get_mol_info(mols):
 
         # Detect chiral centers (including unassigned centers)
         chiral_centers = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
-        unspecified_centers = [center for center in chiral_centers if center[1] == '?']
+        unspecified_centers = [
+            center for center in chiral_centers if center[1] == '?']
 
         # Count and store stereochemical information
         stereo_count = len(unspecified_centers)

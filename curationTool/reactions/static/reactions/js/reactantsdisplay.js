@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
     
     if (sessionStorage.getItem('userID') !== null) {
         setLoggedInStatusBasedOnUrl();
@@ -65,30 +65,42 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Optionally, handle the error by displaying a message to the user
             });
     }
-    if (subsystemList.length === 0) {
-        window.scrollTo(0, 0);
-        fetch(getVMHsubsystems, {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': csrfToken
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                showErrorModal(data.message);
-            }
-            else {
-                subsystemList = data.subsystem_list; // Save the returned list
-                hidemodal();
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    }
+    subsystemList = await updateSubsystems();
     setupTooltips();
 
 });
+async function updateSubsystems() {
+    if (subsystemList.length === 0) {
+        try {
+            window.scrollTo(0, 0);
+
+            const response = await fetch(getVMHsubsystems, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                showErrorModal(data.message);
+                return []; // Return an empty list if there's an error
+            } else {
+                hidemodal();
+                return data.subsystem_list; // Return the fetched list
+            }
+        } catch (error) {
+            console.error('Error fetching subsystems:', error);
+            return []; // Return an empty list in case of failure
+        }
+    }
+    else {
+        return subsystemList;
+    }
+}
+
 
 function createnewreaction() {
     // Get the input element by its ID

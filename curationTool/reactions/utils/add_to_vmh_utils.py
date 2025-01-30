@@ -1,5 +1,5 @@
 import json
-import random 
+import random
 import os
 from rdkit import Chem
 from rdkit.Chem.rdMolDescriptors import CalcMolFormula
@@ -8,17 +8,23 @@ from reactions.utils.search_vmh import check_reaction_vmh
 import requests
 # Function to gather additional reaction details
 
+
 def gather_reaction_details(reaction_objs):
     """
     Gathers additional details for reactions, such as direction, references, external links, gene info, comments, and confidence scores.
     """
     reaction_directions = [reaction.direction for reaction in reaction_objs]
     reaction_subsystems = [reaction.subsystem for reaction in reaction_objs]
-    reaction_references = [reaction.references if reaction.references else [] for reaction in reaction_objs]
-    reaction_external_links = [reaction.ext_links if reaction.ext_links else [] for reaction in reaction_objs]
-    reaction_gene_info = [reaction.gene_info if reaction.gene_info else [] for reaction in reaction_objs]
-    reaction_comments = [reaction.comments if reaction.comments else [] for reaction in reaction_objs]
-    reaction_confidence_scores = [reaction.confidence_score for reaction in reaction_objs]
+    reaction_references = [
+        reaction.references if reaction.references else [] for reaction in reaction_objs]
+    reaction_external_links = [
+        reaction.ext_links if reaction.ext_links else [] for reaction in reaction_objs]
+    reaction_gene_info = [
+        reaction.gene_info if reaction.gene_info else [] for reaction in reaction_objs]
+    reaction_comments = [reaction.comments if reaction.comments else []
+                         for reaction in reaction_objs]
+    reaction_confidence_scores = [
+        reaction.confidence_score for reaction in reaction_objs]
     return reaction_directions, reaction_subsystems, reaction_references, reaction_external_links, reaction_gene_info, reaction_comments, reaction_confidence_scores
 
 
@@ -29,31 +35,83 @@ def save_json(data, filepath):
     with open(filepath, 'w') as f:
         json.dump(data, f)
 
-def rxn_prepare_json_paths_and_variables(reaction_identifiers, reaction_names, reaction_formulas, reaction_directions, reaction_subsystems, reaction_references, reaction_external_links, reaction_gene_info, reaction_comments, reaction_confidence_scores):
+
+def rxn_prepare_json_paths_and_variables(
+        reaction_identifiers,
+        reaction_names,
+        reaction_formulas,
+        reaction_directions,
+        reaction_subsystems,
+        reaction_references,
+        reaction_external_links,
+        reaction_gene_info,
+        reaction_comments,
+        reaction_confidence_scores):
     """
     Prepares JSON paths and variables for MATLAB execution, saving them to temporary files.
     """
     rand_float = random.uniform(0, 10000000)
-    json_paths = [f'reactionIds.json{rand_float}', f'reactionNames.json{rand_float}', f'reactionFormulas.json{rand_float}', f'reactionDirections.json{rand_float}', f'reactionSubsystems.json{rand_float}', f'reactionReferences.json{rand_float}', f'reactionExternalLinks.json{rand_float}', f'reactionGeneInfo.json{rand_float}', f'reactionComments.json{rand_float}', f'reactionConfidenceScores.json{rand_float}']
-    variables = [reaction_identifiers, reaction_names, reaction_formulas, reaction_directions, reaction_subsystems, reaction_references, reaction_external_links, reaction_gene_info, reaction_comments, reaction_confidence_scores]
+    json_paths = [
+        f'reactionIds.json{rand_float}',
+        f'reactionNames.json{rand_float}',
+        f'reactionFormulas.json{rand_float}',
+        f'reactionDirections.json{rand_float}',
+        f'reactionSubsystems.json{rand_float}',
+        f'reactionReferences.json{rand_float}',
+        f'reactionExternalLinks.json{rand_float}',
+        f'reactionGeneInfo.json{rand_float}',
+        f'reactionComments.json{rand_float}',
+        f'reactionConfidenceScores.json{rand_float}']
+    variables = [
+        reaction_identifiers,
+        reaction_names,
+        reaction_formulas,
+        reaction_directions,
+        reaction_subsystems,
+        reaction_references,
+        reaction_external_links,
+        reaction_gene_info,
+        reaction_comments,
+        reaction_confidence_scores]
     for idx, (path, variable) in enumerate(zip(json_paths, variables)):
         path = os.path.join(os.getcwd(), path)
         json_paths[idx] = path
         save_json(variable, path)
     return json_paths
 
-def met_prepare_json_paths_and_variables(met_abbrs, met_names, met_formulas,met_charges, met_inchikeys, met_smiles):
+
+def met_prepare_json_paths_and_variables(
+        met_abbrs,
+        met_names,
+        met_formulas,
+        met_charges,
+        met_inchikeys,
+        met_smiles):
     """
     Prepares JSON paths and variables for MATLAB execution, saving them to temporary files.
     """
-    rand_float = random.uniform(0,10000000)
-    json_paths = [f'metAbbrs.json{rand_float}', f'metNames.json{rand_float}', f'metFormulas.json{rand_float}', f'metInchikeys.json{rand_float}', f'metSmiles.json{rand_float}', f'metCharges.json{rand_float}']
-    variables = [met_abbrs, met_names, met_formulas, met_inchikeys, met_smiles, met_charges]
+    rand_float = random.uniform(0, 10000000)
+    json_paths = [
+        f'metAbbrs.json{rand_float}',
+        f'metNames.json{rand_float}',
+        f'metFormulas.json{rand_float}',
+        f'metInchikeys.json{rand_float}',
+        f'metSmiles.json{rand_float}',
+        f'metCharges.json{rand_float}']
+    variables = [
+        met_abbrs,
+        met_names,
+        met_formulas,
+        met_inchikeys,
+        met_smiles,
+        met_charges]
     for idx, (path, variable) in enumerate(zip(json_paths, variables)):
         path = os.path.join(os.getcwd(), path)
         json_paths[idx] = path
         save_json(variable, path)
     return json_paths
+
+
 def add_reaction_matlab(json_paths, matlab_session):
     """
     Executes MATLAB operations to add reactions to VMH, using the provided JSON paths.
@@ -62,6 +120,7 @@ def add_reaction_matlab(json_paths, matlab_session):
     result['rxn_ids'] = result['result'] if result['status'] == 'success' else []
     return result
 
+
 def add_metabolites_matlab(json_paths, matlab_session):
     """
     Executes MATLAB operations to add metabolites to VMH, using the provided JSON paths.
@@ -69,6 +128,7 @@ def add_metabolites_matlab(json_paths, matlab_session):
     result = matlab_session.execute('add_metab_python', *json_paths)
     result['met_ids'] = result['result'] if result['status'] == 'success' else []
     return result
+
 
 def smiles_to_inchikeys(smiles_list):
     inchi_list = []
@@ -85,15 +145,17 @@ def smiles_to_inchikeys(smiles_list):
         inchi_list = ['' if x is None else x for x in inchi_list]
     return inchi_list
 
+
 def smiles_to_charged_formula(smiles_list):
     charged_formulas = []
     charges = []
-    
+
     for smiles in smiles_list:
         # Convert the SMILES string to a molecule object
         mol = Chem.MolFromSmiles(smiles)
         if mol:
-            # Adding hydrogen to the molecule to ensure the formula includes hydrogens
+            # Adding hydrogen to the molecule to ensure the formula includes
+            # hydrogens
             mol = Chem.AddHs(mol)
             # Calculate the molecular formula
             formula = CalcMolFormula(mol)
@@ -109,22 +171,48 @@ def smiles_to_charged_formula(smiles_list):
     charges = ['' if x is None else x for x in charges]
     return charged_formulas, charges
 
-def get_nonfound_metabolites(reaction_objs,subs_abbr,prods_abbr,search_func):
+
+def get_nonfound_metabolites(
+        reaction_objs,
+        subs_abbr,
+        prods_abbr,
+        search_func):
     react_metab_notfound = {}
-    for react_idx,reaction in enumerate(reaction_objs):
-        subs,subs_types,subs_names = json.loads(reaction.substrates), json.loads(reaction.substrates_types), json.loads(reaction.substrates_names)
-        
-        prods, prods_types, prods_names = json.loads(reaction.products), json.loads(reaction.products_types), json.loads(reaction.products_names)
+    for react_idx, reaction in enumerate(reaction_objs):
+        subs, subs_types, subs_names = json.loads(
+            reaction.substrates), json.loads(
+            reaction.substrates_types), json.loads(
+            reaction.substrates_names)
 
-        subs_founds, subs_miriams = search_func(subs,subs_types, None, side='substrates',nofile=True)
-        prods_founds, prods_miriams = search_func(prods,prods_types, None, side='products',nofile=True)
-        subs_not_found = [(sub,subs_types[idx],subs_abbr[react_idx][idx],subs_names[idx]) for idx,(sub,found) in enumerate(zip(subs,subs_founds)) if not found]
-        prods_not_found = [(prod,prods_types[idx],prods_abbr[react_idx][idx],prods_names[idx]) for idx,(prod,found) in enumerate(zip(prods,prods_founds)) if not found]
-        react_metab_notfound[reaction.id] = {'subs': subs_not_found, 'prods': prods_not_found}
-    
-    # Add the ones not found to the list of metabolites to add to the VMH 
+        prods, prods_types, prods_names = json.loads(
+            reaction.products), json.loads(
+            reaction.products_types), json.loads(
+            reaction.products_names)
 
-    abbrs_all_subs_not_found, abbrs_all_prods_not_found, mols_all_subs_not_found, mols_all_prods_not_found, types_all_subs_not_found, types_all_prods_not_found,names_all_subs_not_found,names_all_prods_not_found = [],[],[], [], [], [], [], []
+        subs_founds, subs_miriams = search_func(
+            subs, subs_types, None, side='substrates', nofile=True)
+        prods_founds, prods_miriams = search_func(
+            prods, prods_types, None, side='products', nofile=True)
+        subs_not_found = [(sub,
+                           subs_types[idx],
+                           subs_abbr[react_idx][idx],
+                           subs_names[idx]) for idx,
+                          (sub,
+                           found) in enumerate(zip(subs,
+                                                   subs_founds)) if not found]
+        prods_not_found = [(prod,
+                            prods_types[idx],
+                            prods_abbr[react_idx][idx],
+                            prods_names[idx]) for idx,
+                           (prod,
+                            found) in enumerate(zip(prods,
+                                                    prods_founds)) if not found]
+        react_metab_notfound[reaction.id] = {
+            'subs': subs_not_found, 'prods': prods_not_found}
+
+    # Add the ones not found to the list of metabolites to add to the VMH
+
+    abbrs_all_subs_not_found, abbrs_all_prods_not_found, mols_all_subs_not_found, mols_all_prods_not_found, types_all_subs_not_found, types_all_prods_not_found, names_all_subs_not_found, names_all_prods_not_found = [], [], [], [], [], [], [], []
     # Iterate through each reaction in react_metab_notfound
     for _, metabolites_info in react_metab_notfound.items():
         # Iterate through the subs_not_found for the current reaction
@@ -159,6 +247,8 @@ def get_nonfound_metabolites(reaction_objs,subs_abbr,prods_abbr,search_func):
     unique_names = [combined_names[i] for i in indices_unique_abbrs]
     return unique_abbrs, unique_mols, unique_types, unique_names
 # dO SAME FOR VMH DB
+
+
 def check_reactions_vmh(reaction_objs):
     in_vmh = []
     for reaction in reaction_objs:
@@ -172,25 +262,40 @@ def check_reactions_vmh(reaction_objs):
         subsystem = reaction.subsystem
         subs_comps = json.loads(reaction.subs_comps)
         prods_comps = json.loads(reaction.prods_comps)
-        subs_mols,subs_errors = any_to_mol(substrates, substrates_types,request=None, side='substrates')
-        prod_mols,prod_errors = any_to_mol(products, products_types,request=None, side='products')
+        subs_mols, subs_errors = any_to_mol(
+            substrates, substrates_types, request=None, side='substrates')
+        prod_mols, prod_errors = any_to_mol(
+            products, products_types, request=None, side='products')
         all_errors = subs_errors + prod_errors
-        if any(elem != None for elem in all_errors):
+        if any(elem is not None for elem in all_errors):
             in_vmh.append(False)
             continue
         # Check if the reaction is found in VMH
-        vmh_found = check_reaction_vmh(substrates, products, subs_sch, prod_sch,substrates_types,products_types,subs_mols,prod_mols,direction, subsystem, subs_comps, prods_comps)
+        vmh_found = check_reaction_vmh(
+            substrates,
+            products,
+            subs_sch,
+            prod_sch,
+            substrates_types,
+            products_types,
+            subs_mols,
+            prod_mols,
+            direction,
+            subsystem,
+            subs_comps,
+            prods_comps)
         if vmh_found['found'] and not vmh_found['similar']:
             in_vmh.append(True)
         else:
             in_vmh.append(False)
     return in_vmh
 
+
 def check_names_abbrs_vmh(names_abbr_list):
     names_vmh = {}
     abbr_vmh = {}
     BASE_URL = 'https://www.vmh.life/'
-    for name,abbr in names_abbr_list:
+    for name, abbr in names_abbr_list:
         endpoint = f"{BASE_URL}_api/reactions/?abbreviation={abbr}"
         response = requests.get(endpoint, verify=False)
         found_abbr = False
@@ -209,7 +314,8 @@ def check_names_abbrs_vmh(names_abbr_list):
                     found_name = True
                     break
         names_vmh[name] = found_name
-    return names_vmh,abbr_vmh
+    return names_vmh, abbr_vmh
+
 
 def make_request_names_abbrs(name, abbr):
     BASE_URL = 'https://www.vmh.life/'
@@ -231,17 +337,23 @@ def make_request_names_abbrs(name, abbr):
                 name_found = True
                 break
 
-    return name_found,abbr_found
+    return name_found, abbr_found
 
-def check_met_names_abbrs_vmh(subs_info, prods_info, subs_founds, prods_founds):
-    def update_vmh_info(items_info, names_vmh, abbr_vmh,found_info):
-        for idx,item in enumerate(items_info):
+
+def check_met_names_abbrs_vmh(
+        subs_info,
+        prods_info,
+        subs_founds,
+        prods_founds):
+    def update_vmh_info(items_info, names_vmh, abbr_vmh, found_info):
+        for idx, item in enumerate(items_info):
             if found_info[idx]:
                 continue
-            name_found, abbr_found = make_request_names_abbrs(item['name'], item['abbreviation'])
+            name_found, abbr_found = make_request_names_abbrs(
+                item['name'], item['abbreviation'])
             names_vmh[item['name']] = name_found
             abbr_vmh[item['abbreviation']] = abbr_found
-    n_reactions = len(subs_info) 
+    n_reactions = len(subs_info)
     subs_names_vmh = {}
     subs_abbr_vmh = {}
     prods_names_vmh = {}
@@ -249,6 +361,14 @@ def check_met_names_abbrs_vmh(subs_info, prods_info, subs_founds, prods_founds):
     for i in range(n_reactions):
         subs_found = subs_founds[i]
         prods_found = prods_founds[i]
-        update_vmh_info(subs_info[i], subs_names_vmh, subs_abbr_vmh,subs_found)
-        update_vmh_info(prods_info[i], prods_names_vmh, prods_abbr_vmh,prods_found)
+        update_vmh_info(
+            subs_info[i],
+            subs_names_vmh,
+            subs_abbr_vmh,
+            subs_found)
+        update_vmh_info(
+            prods_info[i],
+            prods_names_vmh,
+            prods_abbr_vmh,
+            prods_found)
     return subs_names_vmh, subs_abbr_vmh, prods_names_vmh, prods_abbr_vmh

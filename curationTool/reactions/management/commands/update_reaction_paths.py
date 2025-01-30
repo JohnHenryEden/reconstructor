@@ -3,6 +3,7 @@ from django.core.exceptions import ObjectDoesNotExist
 import json
 from reactions.models import Reaction  # Adjust the import path as necessary
 
+
 class Command(BaseCommand):
     help = 'Updates the visualization field in Reaction objects to remove "reactions/" from paths'
 
@@ -22,10 +23,14 @@ class Command(BaseCommand):
                         reaction.save()
                         updated_count += 1
                         # Updated line to output detailed update information
-                        self.stdout.write(self.style.SUCCESS(f'Updated Reaction ID {reaction.id}: path from "{original_path}" to "{new_path}"'))
+                        self.stdout.write(self.style.SUCCESS(
+                            f'Updated Reaction ID {reaction.id}: path from "{original_path}" to "{new_path}"'))
             except json.JSONDecodeError:
-                self.stdout.write(self.style.WARNING(f'Skipping Reaction ID {reaction.id} due to invalid JSON in visualization field'))
+                self.stdout.write(self.style.WARNING(
+                    f'Skipping Reaction ID {reaction.id} due to invalid JSON in visualization field'))
             except Exception as e:
-                self.stdout.write(self.style.ERROR(f'Error updating Reaction ID {reaction.id}: {str(e)}'))
+                self.stdout.write(
+                    self.style.ERROR(f'Error updating Reaction ID {reaction.id}: {str(e)}'))
 
-        self.stdout.write(self.style.SUCCESS(f'Finished updating {updated_count} reactions.'))
+        self.stdout.write(self.style.SUCCESS(
+            f'Finished updating {updated_count} reactions.'))

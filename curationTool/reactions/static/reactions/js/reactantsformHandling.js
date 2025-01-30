@@ -15,15 +15,116 @@ document.getElementById('close-button').onclick = function() {
     document.getElementById('error-modal').style.display = 'none';
 };
 
+function showIdenticalReactionModal(matches, submitBtn) {
+    return new Promise((resolve) => {
+        const modal = $('#identicalReactionModal');
 
-document.getElementById('reactionForm').addEventListener('submit', function(e) {
+        // 1. Build a dynamic message
+        let messageText = '';
+        if (matches.length > 1) {
+            messageText += `Multiple identical reactions have already been saved in your reactions: <br><br>`;
+        } else {
+            messageText += `An identical reaction has already been saved in your reactions: <br><br>`;
+        }
+
+        // 2. Generate a "View" button for each match
+        matches.forEach(({ reaction_id, reaction_name }) => {
+            messageText += `
+                <button 
+                  class="ui button dynamic-view-btn" 
+                  data-reaction-id="${reaction_id}" 
+                  style="margin-bottom: 0.5em; margin-right: 0.5em;"
+                >
+                  View "${reaction_name}"
+                </button>
+            `;
+        });
+
+        // 3. Prompt user they can create new
+        messageText += `<br><br>Click "Create" to proceed with creating a new reaction.`;
+
+        // Insert the HTML into the modal
+        document.getElementById('identicalReactionMessage').innerHTML = messageText;
+
+        // 4. Attach handlers for each generated "View" button
+        setTimeout(() => {
+            const viewButtons = document.querySelectorAll('.dynamic-view-btn');
+            viewButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const rxnId = this.getAttribute('data-reaction-id');
+                    resolve(`view:${rxnId}`);
+                    modal.modal('hide');
+                });
+            });
+        }, 0);
+
+        // 5. Keep the existing "Create" button
+        document.getElementById('createReactionButton').onclick = function () {
+            resolve('create');
+            modal.modal('hide');
+        };
+
+        // Re-enable submit button if the user closes modal
+        modal.modal({
+            onHide: function() {
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Show the modal
+        modal.modal('show');
+    });
+}
+
+
+async function checkIdenticalReaction(formData, loadingIndicator, submitBtn) {
+    try {
+        const response = await fetch(identicalReactionUrl, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'error') {
+            showErrorModal(data.message);
+            window.scrollTo(0, 0);
+            submitBtn.disabled = false;
+            loadingIndicator.style.display = 'none';
+            return false;
+        }
+
+        if (data.exists) {
+            loadingIndicator.style.display = 'none';
+            const userDecision = await showIdenticalReactionModal(data.matches, submitBtn);
+            if (userDecision.startsWith('view:')) {
+                const rxnId = userDecision.split(':')[1];
+                window.location.href = `/?reaction_id=${rxnId}`;
+                return false;
+            }
+        }
+        loadingIndicator.style.display = 'flex';
+        return true; // Proceed with reaction creation
+    } catch (error) {
+        console.error('Error checking for identical reaction:', error);
+        return false;
+    }
+}
+
+document.getElementById('reactionForm').addEventListener('submit', async function(e) {
     var loadingIndicator = document.getElementById('loadingIndicator');
 
     e.preventDefault(); // Prevent the default form submission
 
     var submitBtn = document.getElementById('submitBtn-form');
     currentUrl = window.location.href;
+    editing = false
     if (currentUrl.includes('edit')) {
+        editing = true
         // pop up that says "are you sure you want to update this reaction?"
         var userConfirmed = confirm('Are you sure you want to update your saved reaction? This action cannot be undone.');
         if (!userConfirmed) {
@@ -56,30 +157,6 @@ document.getElementById('reactionForm').addEventListener('submit', function(e) {
             return
         }
     }
-
-    var isValidSubsystem = subsystemList.some(subsystem => subsystem.toLowerCase() === subsystemField.toLowerCase());
-
-    if (!isValidSubsystem) {
-        var userConfirmed = confirm(`Are you sure you want to add a new subsystem "${subsystemField}"?`);
-        if (!userConfirmed) {
-            var errorMessage = 'The subsystem entered is not valid.';
-            showErrorModal(errorMessage);
-            window.scrollTo(0, 0);
-            return; // Exit the function and do not submit form
-        } else {
-            if (sessionStorage.getItem('userID') !== null) {
-            // Add the new subsystem to the list
-            subsystemList.push(subsystemField);
-            persistSubsystemList(subsystemField); // Persist the new subsystem
-            }
-            else {
-                var errorMessage = 'Please login to add a new subsystem.';
-                showErrorModal(errorMessage);
-                window.scrollTo(0, 0);
-                return; // Exit the function and do not submit form
-            }
-        }
-    }
     // Continue with form submission
 
     const disabledInputs = this.querySelectorAll('input:disabled, select:disabled');
@@ -108,7 +185,36 @@ document.getElementById('reactionForm').addEventListener('submit', function(e) {
     }
     submitBtn.disabled = true;
     loadingIndicator.style.display = 'flex';
+    if (subsystemList.length === 0) {
+        subsystemList = await updateSubsystems();
+    }
+    var isValidSubsystem = subsystemList.some(subsystem => subsystem.toLowerCase() === subsystemField.toLowerCase());
 
+    if (!isValidSubsystem) {
+        var userConfirmed = confirm(`Are you sure you want to add a new subsystem "${subsystemField}"?`);
+        if (!userConfirmed) {
+            var errorMessage = 'The subsystem entered is not valid.';
+            showErrorModal(errorMessage);
+            window.scrollTo(0, 0);
+            submitBtn.disabled = false;
+            loadingIndicator.style.display = 'none';
+            return; // Exit the function and do not submit form
+        } else {
+            if (sessionStorage.getItem('userID') !== null) {
+            // Add the new subsystem to the list
+            subsystemList.push(subsystemField);
+            persistSubsystemList(subsystemField); // Persist the new subsystem
+            }
+            else {
+                var errorMessage = 'Please login to add a new subsystem.';
+                showErrorModal(errorMessage);
+                window.scrollTo(0, 0);
+                submitBtn.disabled = false;
+                loadingIndicator.style.display = 'none';
+                return; // Exit the function and do not submit form
+            }
+        }
+    }
     var skipAtomMapping = document.getElementById('skipAtomMapping').checked;
     formData.append('skipAtomMapping', skipAtomMapping);
     formData.append('nameData', JSON.stringify(nameData));
@@ -130,6 +236,17 @@ document.getElementById('reactionForm').addEventListener('submit', function(e) {
     }   
     formData.append('userID', sessionStorage.getItem('userID'));
 
+
+    // Check if identical reaction exists
+    if (!editing){
+        const shouldProceed = await checkIdenticalReaction(formData, loadingIndicator, submitBtn);
+        if (!shouldProceed) {
+            submitBtn.disabled = false;
+            loadingIndicator.style.display = 'none';
+            return;
+        }
+    }
+    // Create a new reaction
     fetch(inputReactionUrl, {
         method: 'POST',
         body: formData,
@@ -151,7 +268,7 @@ document.getElementById('reactionForm').addEventListener('submit', function(e) {
             const userID = sessionStorage.getItem('userID');
             const reactionId = data.reaction_id; // Ensure reactionId is obtained from the response
             
-            // Send additional request to save CreatedReaction
+            // Send additional request to save CreatedReaction (to keep track of which user created which reaction)
             fetch('create-reaction/', {
                 method: 'POST',
                 body: JSON.stringify({

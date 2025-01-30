@@ -1,22 +1,28 @@
 from django.db import models
 
+
 class User(models.Model):
     name = models.CharField(max_length=100, blank=True, null=True)
     password = models.CharField(max_length=128, blank=True, null=True)
-    saved_reactions = models.ManyToManyField('Reaction', blank=True, related_name='saved_by_users')
+    saved_reactions = models.ManyToManyField(
+        'Reaction', blank=True, related_name='saved_by_users')
     cred_add_to_vmh = models.BooleanField(default=False)
     cred_add_to_rhea = models.BooleanField(default=False)
     orchid_id = models.CharField(max_length=255, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     full_name = models.CharField(max_length=255, blank=True, null=True)
-    templates = models.ManyToManyField('ReactionTemplate', blank=True, related_name='created_by_users')
+    templates = models.ManyToManyField(
+        'ReactionTemplate',
+        blank=True,
+        related_name='created_by_users')
 
     def check_password(self, raw_password):
         return self.password == raw_password
 
 
 class Reaction(models.Model):
-    substrates = models.TextField(help_text='Comma-separated list of substrates.')
+    substrates = models.TextField(
+        help_text='Comma-separated list of substrates.')
     products = models.TextField(help_text='Comma-separated list of products.')
     short_name = models.TextField(blank=True, null=True)
     direction = models.TextField(blank=True, null=True)
@@ -59,7 +65,8 @@ class Reaction(models.Model):
     rxn_formula = models.TextField(blank=True, null=True)
     stereo_counts = models.TextField(blank=True, null=True)
     stereo_locations_list = models.TextField(blank=True, null=True)
-    flags = models.ManyToManyField('Flag', blank=True, related_name='flagged_reactions')
+    flags = models.ManyToManyField(
+        'Flag', blank=True, related_name='flagged_reactions')
 
 
 class ReactionsAddedVMH(models.Model):
@@ -94,19 +101,31 @@ class Subsystem(models.Model):
 
 
 class CreatedReaction(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_reactions')
-    reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE, related_name='created_by_users')
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='created_reactions')
+    reaction = models.ForeignKey(
+        Reaction,
+        on_delete=models.CASCADE,
+        related_name='created_by_users')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.reaction.short_name} by {self.user.name}"
 
+
 class Flag(models.Model):
-    name_flag = models.CharField(max_length=255, blank=True, null=True)  # Updated field name and made it optional
+    # Updated field name and made it optional
+    name_flag = models.CharField(max_length=255, blank=True, null=True)
     color = models.CharField(max_length=7)  # Hex color code like '#FFFF00'
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='flags')
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='flags')
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
+
 def __str__(self):
     return f"{self.name_flag or 'Unnamed Flag'} ({self.color}) by {self.user.name}"
 
@@ -116,7 +135,7 @@ class ReactionTemplate(models.Model):
     Stores user-created (or default) reaction templates
     that mirror key fields in the Reaction model.
     """
-    name = models.CharField(max_length=255)  
+    name = models.CharField(max_length=255)
     user = models.ForeignKey(
         'User',  # or your custom user model
         on_delete=models.SET_NULL,
@@ -126,8 +145,7 @@ class ReactionTemplate(models.Model):
     )
     is_default = models.BooleanField(
         default=False,
-        help_text="True for built-in templates; these shouldn't be edited or deleted."
-    )
+        help_text="True for built-in templates; these shouldn't be edited or deleted.")
 
     substrates = models.TextField(
         blank=True,

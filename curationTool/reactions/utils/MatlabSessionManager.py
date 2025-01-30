@@ -2,6 +2,7 @@ import json
 import os
 import matlab.engine
 
+
 class MatlabSessionManager:
     _instance = None
 
@@ -18,11 +19,17 @@ class MatlabSessionManager:
 
     def _setup_cobra_toolbox(self):
         # Get the base directory (two levels up from this script)
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+        base_dir = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                '..',
+                '..',
+                '..'))
         config_path = os.path.join(base_dir, 'config.json')
 
         if not os.path.exists(config_path):
-            raise FileNotFoundError(f"Configuration file {config_path} not found.")
+            raise FileNotFoundError(
+                f"Configuration file {config_path} not found.")
 
         with open(config_path, 'r') as config_file:
             config = json.load(config_file)
@@ -42,7 +49,9 @@ class MatlabSessionManager:
                 result = matlab_function(*args, **kwargs)
                 return {'status': 'success', 'result': result}
             else:
-                return {'status': 'error', 'message': f'Command {command} not found'}
+                return {
+                    'status': 'error',
+                    'message': f'Command {command} not found'}
         except matlab.engine.MatlabExecutionError as e:
             return {'status': 'error', 'message': str(e)}
 
