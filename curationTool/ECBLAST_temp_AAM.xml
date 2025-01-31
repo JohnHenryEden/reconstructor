@@ -2,7 +2,7 @@
 <EC_BLAST>
   <ANNOTATION>
     <MAPPING STATUS="SELECTED">
-      <AAM>[O:1]=[O:2]&gt;&gt;[O:1]=[O:2]</AAM>
+      <AAM>[OH2:1].[O:2]=[O:3]&gt;&gt;[OH2:1].[O:2]=[O:3]</AAM>
       <RANK_REACTANT>{}</RANK_REACTANT>
       <RANK_PRODUCT>{}</RANK_PRODUCT>
     </MAPPING>

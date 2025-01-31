@@ -20,6 +20,8 @@ from django.conf import settings
 from django.views.decorators.http import require_GET
 from .user_views import validate_user_ID
 from django.shortcuts import get_object_or_404
+from rdkit.Chem import MolToInchiKey
+
 
 
 def input_reaction(request):
@@ -86,7 +88,6 @@ def input_reaction(request):
         prod_mols, prod_errors, _ = any_to_mol(
             products_list, products_types, request, side='products')
         subsystem = request.POST.get('subsystem')
-
         all_errors = subs_errors + prod_errors
         if any(elem is not None for elem in all_errors):
             print(all_errors)
@@ -105,6 +106,19 @@ def input_reaction(request):
         metabolite_names = substrates_names + products_names
         reaction_rxn_file = construct_reaction_rxnfile(
             subs_mols, subs_sch, prod_mols, prod_sch, substrates_names, products_names)
+        subs_inchi_keys = [(MolToInchiKey(mol), int(stoich)) for mol, stoich in zip(subs_mols, subs_sch)]
+        prods_inchi_keys = [(MolToInchiKey(mol), int(stoich)) for mol, stoich in zip(prod_mols, prod_sch)]
+
+        # Sort to make it order-independent
+        subs_inchi_keys.sort()
+        prods_inchi_keys.sort()
+
+        # Create a unique reaction signature (store as JSON string)
+        reaction_signature = json.dumps({
+            "substrates": subs_inchi_keys,
+            "products": prods_inchi_keys
+        }, sort_keys=True)
+
         reaction.save()
 
         # Skip atom mapping if any product fields are empty or only one
@@ -201,6 +215,7 @@ def input_reaction(request):
             metabolite_mol_file_strings)
         reaction.stereo_counts = json.dumps(stereo_counts)
         reaction.stereo_locations_list = json.dumps(stereo_locations_list)
+        reaction.reaction_signature = reaction_signature
         reaction.save()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             data = {
@@ -701,61 +716,71 @@ def search_reactions(request):
     ]
     return JsonResponse({'reactions': reactions_data})
 
-
 def identical_reaction(request):
     """
     Checks if the user already has a saved reaction that matches the
     posted substrates/products (and their stoichiometries).
-    Returns a JSON response with 'exists', 'reaction_id', and 'reaction_name' if found.
+    Uses reaction_signature for an order-independent comparison.
+
+    Returns:
+        JsonResponse with:
+            - 'exists': True/False
+            - 'matches': List of matching reactions (if found)
+            - 'status': 'success'
     """
     user_id = request.POST.get('userID')
     if not user_id:
-        # If no userID is provided, we consider it "not found."
         return JsonResponse({'exists': False, 'status': 'success'})
 
-    # Attempt to load the user
+    # Ensure the user exists
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
-        # User not found => no saved reactions
         return JsonResponse({'exists': False, 'status': 'success'})
 
-    # Gather substrates/products and their stoichiometries from form data
-    substrates_list = request.POST.getlist('substrates')  # e.g. ["H2O", "ATP"]
-    subs_sch_list = request.POST.getlist('subs_sch')    # e.g. ["1", "1"]
-    products_list = request.POST.getlist('products')    # e.g. ["ADP", "Pi"]
-    prods_sch_list = request.POST.getlist('prod_sch')    # e.g. ["1", "1"]
+    # Gather substrates/products and their stoichiometries from request
+    substrates_list = request.POST.getlist('substrates')
+    subs_sch_list = request.POST.getlist('subs_sch')
+    products_list = request.POST.getlist('products')
+    prods_sch_list = request.POST.getlist('prod_sch')
 
-    # Convert to JSON-strings as stored in Reaction model
-    # (Make sure subs_sch and prod_sch are converted to int before JSON-serializing
-    #  if that's how they are stored in the Reaction model.)
-    substrates_str = json.dumps(substrates_list)
-    subs_sch_str = json.dumps([int(s) for s in subs_sch_list])
-    products_str = json.dumps(products_list)
-    prods_sch_str = json.dumps([int(s) for s in prods_sch_list])
+    substrates_types = request.POST.getlist('substrates_type')
+    products_types = request.POST.getlist('products_type')
 
-    matching_reactions = user.saved_reactions.filter(
-        substrates=substrates_str,
-        subs_sch=subs_sch_str,
-        products=products_str,
-        prods_sch=prods_sch_str
-    )
+    # Convert stoichiometries to integers
+    try:
+        subs_sch = [int(s) for s in subs_sch_list]
+        prods_sch = [int(s) for s in prods_sch_list]
+    except ValueError:
+        return JsonResponse({'error': 'Invalid stoichiometry values', 'status': 'error'})
+
+    # Convert metabolites to RDKit Mol objects
+    subs_mols, subs_errors, _ = any_to_mol(substrates_list, substrates_types, request, side='substrates')
+    prod_mols, prod_errors, _ = any_to_mol(products_list, products_types, request, side='products')
+
+    if any(subs_errors) or any(prod_errors):
+        return JsonResponse({'error': 'Failed to process some metabolites', 'status': 'error'})
+
+    # Generate InChIKey-based reaction signature
+    subs_inchi_keys = [(MolToInchiKey(mol), int(stoich)) for mol, stoich in zip(subs_mols, subs_sch) if mol]
+    prods_inchi_keys = [(MolToInchiKey(mol), int(stoich)) for mol, stoich in zip(prod_mols, prods_sch) if mol]
+
+    # Sort InChIKeys and create reaction signature
+    subs_inchi_keys.sort()
+    prods_inchi_keys.sort()
+    reaction_signature = json.dumps({
+        "substrates": subs_inchi_keys,
+        "products": prods_inchi_keys
+    }, sort_keys=True)
+
+    # Look for existing reactions with the same signature (only for this user)
+    matching_reactions = user.saved_reactions.filter(reaction_signature=reaction_signature)
 
     if matching_reactions.exists():
-        matches_data = []
-        for r in matching_reactions:
-            r_name = r.short_name or f"Reaction {r.id}"
-            matches_data.append({
-                'reaction_id': r.id,
-                'reaction_name': r_name
-            })
-        return JsonResponse({
-            'exists': True,
-            'matches': matches_data,
-            'status': 'success'
-        })
-    else:
-        return JsonResponse({'exists': False, 'status': 'success'})
+        matches_data = [{'reaction_id': r.id, 'reaction_name': r.short_name or f"Reaction {r.id}"} for r in matching_reactions]
+        return JsonResponse({'exists': True, 'matches': matches_data, 'status': 'success'})
+
+    return JsonResponse({'exists': False, 'status': 'success'})
 
 
 @require_POST

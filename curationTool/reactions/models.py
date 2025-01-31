@@ -67,6 +67,8 @@ class Reaction(models.Model):
     stereo_locations_list = models.TextField(blank=True, null=True)
     flags = models.ManyToManyField(
         'Flag', blank=True, related_name='flagged_reactions')
+    reaction_signature = models.TextField(blank=True, null=True, help_text="Unique identifier for reaction matching")
+
 
 
 class ReactionsAddedVMH(models.Model):
