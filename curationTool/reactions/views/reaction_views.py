@@ -729,7 +729,7 @@ def identical_reaction(request):
             - 'status': 'success'
     """
     user_id = request.POST.get('userID')
-    if not user_id:
+    if not user_id or user_id == 'null':
         return JsonResponse({'exists': False, 'status': 'success'})
 
     # Ensure the user exists
