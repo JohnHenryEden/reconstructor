@@ -17,10 +17,7 @@ function displayReactionMessage(reactionData) {
         link.setAttribute('target', '_blank');
         link.textContent = reactionData.vmh_url;
         messageContainer.appendChild(link);
-    } else {
-        const messageText = document.createTextNode('Reaction not found at VMH');
-        messageContainer.appendChild(messageText);
-    }
+    } 
 
     // Display the message
     messageContainer.style.display = 'block';

@@ -1,12 +1,10 @@
 document.addEventListener('DOMContentLoaded', async function () {
-    
     if (sessionStorage.getItem('userID') !== null) {
-        setLoggedInStatusBasedOnUrl();
         username = sessionStorage.getItem('userName');
         userID = sessionStorage.getItem('userID');
         document.getElementById('userDisplay').innerHTML = `<i class="icon user"></i> User: ${username}`;
         document.getElementById('loginButton').textContent = 'Log out';
-
+        setLoggedInStatusBasedOnUrl('');
         fetch(setSessionUser, {
             method: 'POST',
             headers: {
@@ -37,7 +35,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     const urlParams = new URLSearchParams(window.location.search);
     const reactionId = urlParams.get('reaction_id');
     const action = urlParams.get('action');
-
     if (reactionId || action === 'edit') {
         fetch(getReaction + reactionId)
             .then(response => {
@@ -52,14 +49,19 @@ document.addEventListener('DOMContentLoaded', async function () {
                 confirmAll();
                 displayDivs(reactionData);
                 if (reactionData.short_name) {
+                    let reactionDataName = reactionData.short_name;
                     if(reactionData.short_name.length>20){
-                        reactionData = reactionData.short_name.substring(0, 30) + "...";
-                        setLoggedInStatusBasedOnUrl(reactionData);
+                        reactionDataName = reactionData.short_name.substring(0, 30) + "...";
                     }
-                    else{setLoggedInStatusBasedOnUrl(reactionData.short_name);}
+                    let reactionDataDescription = reactionData.description;
+                    reactionStatusInfo = {
+                        'name': reactionDataName,
+                        'description': reactionDataDescription
+                      };
+                    setLoggedInStatusBasedOnUrl(reactionStatusInfo);
+                    DisplayTag(reactionData.Organs);
                 }
-                DisplayTag(reactionData.Organs);
-                })
+            })
             .catch(error => {
                 console.error('Error fetching reaction data:', error);
                 // Optionally, handle the error by displaying a message to the user

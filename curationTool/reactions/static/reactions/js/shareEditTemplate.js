@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const shareTemplatesContainer = document.getElementById('shareTemplatesContainer');
   const manageTemplateBtn = document.getElementById('manageTemplateBtn');
   const shareTemplateBtn = document.getElementById('shareTemplateBtn');
-  const editTemplateBtn = document.getElementById('editTemplateBtn');
 
   // Open Manage Templates Modal
   manageTemplateBtn.addEventListener('click', function () {
@@ -18,12 +17,6 @@ document.addEventListener('DOMContentLoaded', function () {
   shareTemplateBtn.addEventListener('click', function () {
       $('#manageTemplatesModal').modal('hide'); // Close Manage Templates Modal
       $('#shareTemplateModal').modal('show');  // Open Share Templates Modal
-  });
-
-  // Placeholder: Open Edit Templates Modal when Edit button is clicked
-  editTemplateBtn.addEventListener('click', function () {
-      $('#manageTemplatesModal').modal('hide'); // Close Manage Templates Modal
-      $('#editTemplateModal').modal('show');   // Open Edit Templates Modal
   });
 
   const confirmShareBtn = document.getElementById('confirmShare');
@@ -103,78 +96,114 @@ document.addEventListener('DOMContentLoaded', function () {
 document.addEventListener('DOMContentLoaded', function () {
     const editTemplateBtn = document.getElementById('editTemplateBtn');
     const editTemplatesContainer = document.getElementById('editTemplatesContainer');
-    const renameTemplateBtn = document.getElementById('renameTemplateBtn');
     const deleteTemplateBtn = document.getElementById('deleteTemplateBtn');
-    const newTemplateName = document.getElementById('newTemplateName');
-    userID = sessionStorage.getItem('userID');
-    let selectedTemplate = null; // Keep track of the selected template
-    let templateList = []; // Template names
+    const submitTemplateChangesBtn = document.getElementById('submitTemplateChanges');
 
-    // Open Edit Templates Modal and load templates
+    let userID = sessionStorage.getItem('userID');
+    let selectedTemplate = null;
+    let templateList = [];
+    let templatesFetched = { value: false };
+    function resetTemplateList() {
+        templateList = [];
+        templatesFetched.value = false;
+    }
+    let nameInput = document.getElementById('editTemplateName');
+    let descInput = document.getElementById('editTemplateDescription');
+    // Open Edit Modal
     editTemplateBtn.addEventListener('click', async function () {
         $('#editTemplateModal').modal('show');
-        editTemplatesContainer.innerHTML = ''; // Clear existing buttons
-
-        // Fetch templates (reuse fetchTemplates if available)
-        await window.ReactionUtils.fetchTemplates(templateList, { value: false });
-
-        // Create buttons for each template
-        templateList.forEach(templateName => {
-            const button = document.createElement('div');
-            button.textContent = templateName;
-            button.className = 'template-button';
-            button.addEventListener('click', function () {
-                // Highlight the selected template
-                document.querySelectorAll('.template-button').forEach(btn => btn.classList.remove('selected'));
-                button.classList.add('selected');
-                selectedTemplate = templateName; // Update selected template
-            });
-            editTemplatesContainer.appendChild(button);
-        });
+        await loadTemplates();
     });
 
-    // Rename Template
-    renameTemplateBtn.addEventListener('click', async function () {
+    async function loadTemplates() {
+        console.log('Loading templates...');
+        editTemplatesContainer.innerHTML = '';
+        try {
+            await window.ReactionUtils.fetchTemplates(templateList, templatesFetched);
+            templateList.forEach(templateName => {
+                const button = document.createElement('div');
+                button.textContent = templateName;
+                button.className = 'template-button';
+                button.addEventListener('click', function () {
+                    // Highlight the selected template
+                    document.querySelectorAll('.template-button').forEach(btn => btn.classList.remove('selected'));
+                    button.classList.add('selected');
+                    selectedTemplate = templateName; // Update selected template
+                    loadTemplateDetails(userID, templateName);
+                });
+                editTemplatesContainer.appendChild(button);
+            });
+        } catch (error) {
+            console.error('Error loading templates:', error);
+        }
+    }
+
+    async function loadTemplateDetails(userID, templateName) {
+        try {
+            const response = await fetch('/get_rxn_template/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    reaction_type: templateName,
+                    userID: userID
+                })
+            });
+            
+            const details = await response.json();
+            nameInput.value = details.name;
+            descInput.value = details.description || '';
+        } catch (error) {
+            console.error('Error loading template details:', error);
+        }
+    }
+    // Save Changes
+    submitTemplateChangesBtn.addEventListener('click', async function () {
         if (!selectedTemplate) {
-            alert('Please select a template to rename.');
+            alert('Please select a template to edit.');
             return;
         }
 
-        const newName = newTemplateName.value.trim();
+        const newName = nameInput.value.trim();
+        const newDesc = descInput.value.trim();
+
         if (!newName) {
-            alert('Please enter a new name for the template.');
+            alert('Template name is required.');
             return;
         }
 
         try {
-            const response = await fetch('/rename_template/', {
+            const response = await fetch('/update_template/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': csrfToken,
+                    'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify({
                     old_name: selectedTemplate,
                     new_name: newName,
-                    userID: userID,
-                }),
+                    description: newDesc,
+                    userID: sessionStorage.getItem('userID')
+                })
             });
 
             const data = await response.json();
             if (response.ok && data.status === 'success') {
-                alert('Template renamed successfully!');
-                editTemplateBtn.click(); // Refresh the template list
-                newTemplateName.value = ''; // Clear the input field
+                alert('Template updated successfully!');
+                resetTemplateList();
+                loadTemplates();
+                nameInput.value = '';
+                descInput.value = '';
             } else {
-                alert(`Error renaming template: ${data.message || 'Unknown error'}`);
+                alert(`Error: ${data.message || 'Failed to update template'}`);
             }
         } catch (error) {
-            console.error('Error:', error);
-            alert('An error occurred while renaming the template.');
+            console.error('Error updating template:', error);
+            alert('An error occurred while updating the template.');
         }
     });
-
     // Delete Template
     deleteTemplateBtn.addEventListener('click', async function () {
         if (!selectedTemplate) {
@@ -202,8 +231,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const data = await response.json();
             if (response.ok && data.status === 'success') {
                 alert('Template deleted successfully!');
-                editTemplateBtn.click(); // Refresh the list of templates
-                newTemplateName.value = ''; // Clear the input field
+                resetTemplateList();
+                loadTemplates();
             } else {
                 alert(`Error deleting template: ${data.message || 'Unknown error'}`);
             }

@@ -266,6 +266,7 @@ def get_reaction(request, reaction_id):
             'Organs': reaction.Organs,
             'reaction_id': reaction.id,
             'short_name': reaction.short_name,
+            'description': reaction.description,
             'substrates': safe_json_loads(reaction.substrates),
             'products': safe_json_loads(reaction.products),
             'substrates_names': safe_json_loads(reaction.substrates_names),
@@ -613,6 +614,7 @@ def saved_reactions(request, modal=False):
             subs_comps = json.loads(reaction.subs_comps)
             prods_comps = json.loads(reaction.prods_comps)
             short_name = reaction.short_name
+            description = reaction.description  # Get the reaction description
 
             # Construct details strings
             subs_details = " + ".join(
@@ -661,6 +663,7 @@ def saved_reactions(request, modal=False):
                 'reaction': reaction,
                 'details': {
                     'short_name': short_name,
+                    'description': description,  # Include description in details
                     'subs_details': subs_details,
                     'prods_details': prods_details,
                     'molc_formula': reaction.molc_formula,
@@ -926,6 +929,31 @@ def already_saved(request):
         except User.DoesNotExist:
             return JsonResponse({'error': 'User does not exist'}, status=404)
         except (KeyError, ValueError):
+            return JsonResponse({'error': 'Invalid data'}, status=400)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+def edit_reaction_info(request):
+    """Edit a reaction's short name and/or description."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            reaction_id = int(data.get('reaction_id'))
+            new_name = data.get('new_name')
+            new_description = data.get('new_description')
+
+            reaction = Reaction.objects.get(pk=reaction_id)
+            if new_name is not None:
+                reaction.short_name = new_name
+            if new_description is not None:
+                reaction.description = new_description
+            reaction.save()
+
+            return JsonResponse({'success': True})
+        except Reaction.DoesNotExist:
+            return JsonResponse({'error': 'Reaction does not exist'}, status=404)
+        except (KeyError, ValueError, json.JSONDecodeError):
             return JsonResponse({'error': 'Invalid data'}, status=400)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)

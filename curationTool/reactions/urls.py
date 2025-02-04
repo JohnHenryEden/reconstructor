@@ -37,6 +37,7 @@ urlpatterns = [
     path('check-reaction', reaction_views.already_saved, name='already_saved'),
     path('saved_reactions/', reaction_views.saved_reactions, name='saved_reactions'),
     path('available_reactions', reaction_views.get_available_reactions, name='available_reactions'),
+    path('edit_reaction_info/', reaction_views.edit_reaction_info, name='edit_reaction_info'),
 
     path('saved_reactions/flags/<int:user_id>/', flag_views.get_user_flags, name='get_user_flags'),
     path('flags/<int:user_id>/', flag_views.get_user_flags, name='get_user_flags'),
@@ -56,7 +57,7 @@ urlpatterns = [
     path('list_templates/', template_views.list_templates, name='list_templates'),
     path('create_template/', template_views.create_template, name='create_template'),
     path('share_template/', template_views.share_template, name='share_template'),
-    path('rename_template/', template_views.rename_template, name='rename_template'),
+    path('update_template/', template_views.update_template, name='update_template'),
     path('delete_template/', template_views.delete_template, name='delete_template'),
     path('get_rxn_template/', template_views.get_rxn_template, name='get_rxn_template'),
 

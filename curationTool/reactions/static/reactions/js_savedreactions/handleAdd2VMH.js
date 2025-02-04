@@ -74,9 +74,6 @@ function createGeneSectionHTML(sectionTitle, className, items, reactionId) {
 }
 
 
-
-
-
 async function callPrepareAddToVMH(reactionIds) {
     try {
         const response = await fetch(prepAddToVMHUrl, {
@@ -230,9 +227,9 @@ document.getElementById('addToVMH').addEventListener('click', async function() {
                 <div class="reaction-header" onclick="toggleDetails(event, this)" style="cursor: pointer;">
                     <span class="toggle-icon">−</span>
                     <text>Description:</text>
-                    <input type="text" class="reaction-name-input" placeholder="Reaction Description" value="${reaction.fields.short_name}" data-reaction-id="${reaction.pk}">
+                    <input type="text" class="reaction-name-input" placeholder="Reaction Description" value="${reaction.fields.description}" data-reaction-id="${reaction.pk}">
                     <text>Abbreviation:</text>
-                    <input type="text" class="reaction-abbreviation-input" placeholder="Enter reaction abbreviation" value="" data-reaction-id="${reaction.pk}">
+                    <input type="text" class="reaction-abbreviation-input" placeholder="Enter reaction abbreviation" value="${reaction.fields.short_name}" data-reaction-id="${reaction.pk}">
                     <label for="confidencedropdown-${reactionId}">Confidence Score:</label>
                     <select class="confidencedropdown" id="confidencedropdown-${reactionId}" data-reaction-id="${reactionId}">
                         <option value=" ">-</option>

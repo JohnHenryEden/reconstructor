@@ -68,6 +68,7 @@ class Reaction(models.Model):
     flags = models.ManyToManyField(
         'Flag', blank=True, related_name='flagged_reactions')
     reaction_signature = models.TextField(blank=True, null=True, help_text="Unique identifier for reaction matching")
+    description = models.TextField(blank=True, null=True) 
 
 
 
@@ -177,6 +178,6 @@ class ReactionTemplate(models.Model):
         blank=True,
         null=True
     )
-
+    description = models.TextField(blank=True, null=True)
     def __str__(self):
         return f"{self.name} (Default: {self.is_default})"

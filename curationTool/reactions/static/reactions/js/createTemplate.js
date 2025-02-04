@@ -62,78 +62,97 @@ function toggleCreateTemplateMode() {
 }
 
 async function createTemplate() {
-    const reactionForm = document.getElementById('reactionForm');
-    const formData = new FormData(reactionForm);
+    // Show the modal for template creation
+    $('#createTemplateModal').modal({
+        onApprove: async function () {
+            const templateName = document.getElementById('templateNameInput').value.trim();
+            const templateDescription = document.getElementById('templateDescriptionInput').value.trim();
 
-    // Prompt user for the template name
-    const templateName = prompt('Enter a name for the template:');
-    if (!templateName) {
-        alert('Template name is required.');
-        return;
-    }
-
-    formData.append('template_name', templateName);
-
-    // Collect organ tags
-    const organTagsDiv = document.getElementById('organTags');
-    const organTags = Array.from(organTagsDiv.getElementsByClassName('tag'))
-        .map(tag => tag.firstChild.textContent.trim());
-    formData.append('organs', JSON.stringify(organTags));
-
-    // Validate subsystem field
-    const subsystemField = document.getElementById('subsystemField').value.trim();
-    if (!subsystemField) {
-        alert('Please enter a subsystem.');
-        return;
-    }
-    if (subsystemList.length === 0) {
-        subsystemList = await updateSubsystems();
-    }   
-
-    const isValidSubsystem = subsystemList.some(subsystem => subsystem.toLowerCase() === subsystemField.toLowerCase());
-    if (!isValidSubsystem) {
-        const userConfirmed = confirm(`Are you sure you want to add a new subsystem "${subsystemField}"?`);
-        if (!userConfirmed) {
-            alert('The subsystem entered is not valid.');
-            return;
-        } else if (!sessionStorage.getItem('userID')) {
-            alert('Please log in to add a new subsystem.');
-            return;
-        } else {
-            subsystemList.push(subsystemField); // Add to local list
-            persistSubsystemList(subsystemField); // Save subsystem if logged in
-        }
-    }
-    formData.append('subsystem', subsystemField);
-
-    // Add the user ID if logged in
-    const userID = sessionStorage.getItem('userID');
-    if (userID) {
-        formData.append('userID', userID);
-    }
-
-    // Send the template creation request
-    try {
-        const response = await fetch('/create_template/', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            // Validate template name
+            if (!templateName) {
+                alert('Template name is required.');
+                return false; // Prevent modal from closing
             }
-        });
 
-        if (response.ok) {
-            const data = await response.json();
-            alert('Template created successfully!');
-            // refresh the page
-            location.reload();
-        } else {
-            const errorData = await response.json();
-            alert(`Error creating template: ${errorData.message}`);
-        }
-    } catch (error) {
-        console.error('Error creating template:', error);
-        alert('An error occurred while creating the template.');
-    }
+            // Collect form data
+            const reactionForm = document.getElementById('reactionForm');
+            const formData = new FormData(reactionForm);
+
+            // Append template name and description
+            formData.append('template_name', templateName);
+            formData.append('description', templateDescription);
+
+            // Collect organ tags
+            const organTagsDiv = document.getElementById('organTags');
+            const organTags = Array.from(organTagsDiv.getElementsByClassName('tag'))
+                .map(tag => tag.firstChild.textContent.trim());
+            formData.append('organs', JSON.stringify(organTags));
+
+            // Validate subsystem field
+            if (subsystemList.length === 0) {
+                subsystemList = await updateSubsystems();
+            }
+            const subsystemField = document.getElementById('subsystemField').value.trim();
+            if (subsystemField) {
+                const isValidSubsystem = subsystemList.some(
+                    subsystem => subsystem.toLowerCase() === subsystemField.toLowerCase()
+                );
+                if (!isValidSubsystem) {
+                    const userConfirmed = confirm(`Are you sure you want to add a new subsystem "${subsystemField}"?`);
+                    if (!userConfirmed) {
+                        alert('The subsystem entered is not valid.');
+                        return false; // Prevent modal from closing
+                    } else if (!sessionStorage.getItem('userID')) {
+                        alert('Please log in to add a new subsystem.');
+                        return false; // Prevent modal from closing
+                    } else {
+                        subsystemList.push(subsystemField); // Add to local list
+                        persistSubsystemList(subsystemField); // Save subsystem if logged in
+                    }
+                }
+                formData.append('subsystem', subsystemField);
+            } else {
+                formData.append('subsystem', '');
+            }
+
+            // Add the user ID if logged in
+            const userID = sessionStorage.getItem('userID');
+            if (userID) {
+                formData.append('userID', userID);
+            }
+
+            // Send the template creation request
+            try {
+                const response = await fetch('/create_template/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('Template created successfully!');
+                    location.reload(); // Refresh the page
+                    return true; // Allow modal to close
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error creating template: ${errorData.message}`);
+                    return false; // Prevent modal from closing
+                }
+            } catch (error) {
+                console.error('Error creating template:', error);
+                alert('An error occurred while creating the template.');
+                return false; // Prevent modal from closing
+            }
+        },
+        onDeny: function () {
+            // Clear the form fields if the user cancels
+            document.getElementById('templateNameInput').value = '';
+            document.getElementById('templateDescriptionInput').value = '';
+            return true; // Allow modal to close
+        },
+    }).modal('show');
 }

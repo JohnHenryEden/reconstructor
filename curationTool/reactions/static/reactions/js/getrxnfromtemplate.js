@@ -53,13 +53,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         try {
+            const userId = sessionStorage.getItem('userID');
             const response = await fetch('/get_rxn_template/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reaction_type: selectedValue })
+                body: JSON.stringify({ reaction_type: selectedValue, userID: userId })
             });
             if (response.ok) {
                 const data = await response.json();
+                sessionStorage.setItem('lastTemplateDescription', data.description || '');
                 await updateFormFields(data);
                 $('.ui.modal.getrxntemplate').modal('hide');
             } else {

@@ -368,24 +368,32 @@
                 <!-- Edit Templates Modal -->
                 <div class="ui modal editTemplate" id="editTemplateModal">
                     <i class="close icon"></i>
-                    <div class="header">Edit Templates</div>
+                    <div class="header">Edit Template</div>
                     <div class="content">
                         <div class="ui form">
                             <div class="field">
-                                <label for="editTemplates">Select a Template to Edit:</label>
-                                <div id="editTemplatesContainer" class="template-selection-container">
-                                    <!-- Templates will be dynamically added here as clickable buttons -->
+                                <label>Select a Template:</label>
+                                <div id="editTemplatesContainer" class="ui cards" style="margin-top: 10px;">
+                                    <!-- Template cards will be added here -->
                                 </div>
                             </div>
+                            <div class="ui divider"></div>
                             <div class="field">
-                                <label for="newTemplateName">Rename Template:</label>
-                                <input type="text" id="newTemplateName" placeholder="Enter new template name" />
+                                <label>Template Details</label>
+                                <div class="two fields">
+                                    <div class="field">
+                                        <input type="text" id="editTemplateName" placeholder="Template name">
+                                    </div>
+                                    <div class="field">
+                                        <textarea id="editTemplateDescription" placeholder="Template description" rows="2"></textarea>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="actions editTemplateActions">
-                        <button class="ui button" id="renameTemplateBtn">Rename</button>
-                        <button class="ui red button" id="deleteTemplateBtn">Delete</button>
+                    <div class="actions">
+                        <div class="ui red button" id="deleteTemplateBtn">Delete</div>
+                        <div class="ui primary button" id="submitTemplateChanges">Save Changes</div>
                     </div>
                 </div>
                 <div class="ui modal shareTemplate" id="shareTemplateModal">
@@ -623,7 +631,6 @@
     </div>
 
     <div class="modal-background" id="modalBackground"></div>
-
     <div id="saveReactionModal" class="ui modal savereaction">
         <div class="header">Save Reaction</div>
         <div class="content">
@@ -631,7 +638,9 @@
                 <div class="field">
                     <input type="text" id="reactionNameInput" placeholder="Name the reaction">
                 </div>
-    
+                <div class="field">
+                    <textarea id="reactionDescriptionInput" placeholder="Enter a description (optional)"></textarea>
+                </div>
                 <!-- Dropdown for selecting an existing flag -->
                 <div class="field">
                     <label for="flagSelectCustom">Choose a flag (optional):</label>
@@ -654,9 +663,27 @@
             <div class="ui cancel button" id="closeSaveReactionModal">Cancel</div>
             <div class="ui approve button" id="submitSaveReaction">Save</div>
         </div>
+    </div>    
+    <div id="createTemplateModal" class="ui modal">
+        <div class="header">Create New Template</div>
+        <div class="content">
+            <form class="ui form" id="createTemplateForm">
+                <div class="field">
+                    <input type="text" id="templateNameInput" placeholder="Template name (required)">
+                </div>
+                <div class="field">
+                    <textarea id="templateDescriptionInput" placeholder="Template description (optional)"></textarea>
+                </div>
+                <div class="field">
+                    <p>Your template will be available for future reactions.</p>
+                </div>
+            </form>
+        </div>
+        <div class="actions">
+            <div class="ui cancel button">Cancel</div>
+            <div class="ui approve primary button" id="submitCreateTemplate">Create</div>
+        </div>
     </div>
-    
-    
     <div id="modalOverlayCustom"></div>
     <!-- Create Flag Modal -->
     <div id="createFlagModalCustom" class="ui modal createflag">

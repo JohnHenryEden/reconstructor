@@ -1052,3 +1052,12 @@ select, input[type="text"] {
     text-decoration: none;
     cursor: pointer;
 }
+.no-description {
+    color: gray;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.no-description:hover {
+    color: blue;
+}

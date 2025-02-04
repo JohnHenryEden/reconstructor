@@ -27,6 +27,7 @@ async function checkAndSaveReaction() {
         } else {
             var modal = document.getElementById('saveReactionModal');
             modal.style.display = 'block';
+            document.getElementById('reactionDescriptionInput').value = sessionStorage.getItem('lastTemplateDescription') || '';
             document.getElementById('modalBackground').style.display = 'block';
 
             if (!flagsLoaded) {
@@ -65,6 +66,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const reactionId = urlParams.get('reaction_id');
         const shortNameInput = document.getElementById('reactionNameInput');
         const shortName = shortNameInput.value;
+        const descriptionInput = document.getElementById('reactionDescriptionInput'); // New description input
+        const reactionDescription = descriptionInput ? descriptionInput.value : ''; // Get description
         const flagNameElement = document.getElementById('selectedOption');
         let flagName = flagNameElement.textContent.trim();
         const flagIcon = flagNameElement.querySelector('i');
@@ -87,8 +90,10 @@ document.addEventListener('DOMContentLoaded', function () {
             data.append('userID', userID);
             data.append('reaction_id', reactionId);
             data.append('short_name', shortName);
+            data.append('description', reactionDescription); // Include description
             data.append('flag_name', flagName);
             data.append('flag_color', flagColor);
+
             const nameExists = await reactionNameExists(shortName, userID);
             if (nameExists) {
                 const userConfirmation = confirm(
@@ -98,11 +103,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     return; // Prevent form submission and keep the modal open
                 }
             }            
-            fetch(saveReaction, { // Ensure the correct URL endpoint here
+            fetch(saveReaction, {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': csrfToken // Ensure csrfToken is correctly defined or fetched
+                    'X-CSRFToken': csrfToken
                 },
                 body: data,
             })
@@ -123,6 +128,6 @@ document.addEventListener('DOMContentLoaded', function () {
             alert("Please log in.");
         }
     });
-    
+
     saveReactionButton.addEventListener('click', checkAndSaveReaction);
 });

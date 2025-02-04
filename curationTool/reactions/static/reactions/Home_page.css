@@ -258,7 +258,35 @@ margin-left: 100px; ;}
     100% { transform: rotate(360deg); }
 }
 
+.status-container {
+    display: flex;
+    align-items: center;
+    text-align: center;
+}
 
+.reaction-name {
+    cursor: pointer;
+    color: #007BFF;
+    position: relative;
+    display: inline-block; /* Ensures text takes only as much space as needed */
+    font-weight: bold;
+    margin-top: 5px; /* Slight gap between text */
+}
+
+.reaction-name:hover::after {
+    content: attr(data-tooltip-this);
+    position: absolute;
+    top: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #222;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    font-size: 14px;
+    z-index: 9999;
+}
 
 
 .ui.secondary.vertical.pointing.menu .bottom {

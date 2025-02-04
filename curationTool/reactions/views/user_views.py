@@ -78,11 +78,15 @@ def set_session_user(request):
             {'status': 'error', 'message': 'User not set in session'})
 
 
+from django.http import JsonResponse
+from django.db import models
+
 def save_user_reaction(request):
     if request.method == 'POST':
         reaction_id = request.POST.get('reaction_id')
         userID = request.POST.get('userID')
         short_name = request.POST.get('short_name')
+        description = request.POST.get('description', '')  # Get the description, default to empty string
         flag_name = request.POST.get('flag_name')
         flag_color = request.POST.get('flag_color')
 
@@ -90,25 +94,29 @@ def save_user_reaction(request):
             reaction = Reaction.objects.get(pk=reaction_id)
         except Reaction.DoesNotExist:
             return JsonResponse(
-                {'status': 'error', 'message': 'Invalid reaction'})
+                {'status': 'error', 'message': 'Invalid reaction'}
+            )
 
         user = validate_user_ID(userID)
 
         if user and reaction:
             reaction.short_name = short_name
-            if flag_name.strip() not in [
-                    'None', 'Choose a flag'] and flag_color != 'null':
+            reaction.description = description  # Save the description
+            
+            if flag_name.strip() not in ['None', 'Choose a flag'] and flag_color != 'null':
                 # Get or create the flag
-                flag = Flag.objects.get(name_flag=flag_name, color=flag_color)
+                flag, created = Flag.objects.get_or_create(name_flag=flag_name, color=flag_color)
 
-                # Associate the new flag with the reaction
+                # Associate the flag with the reaction
                 reaction.flags.add(flag)
 
             reaction.save()
             user.saved_reactions.add(reaction)
+
             return JsonResponse({'status': 'success'})
 
         return JsonResponse(
-            {'status': 'error', 'message': 'Invalid user or reaction'})
+            {'status': 'error', 'message': 'Invalid user or reaction'}
+        )
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})

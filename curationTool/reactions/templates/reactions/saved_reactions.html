@@ -11,9 +11,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css">  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
-
-
 
 </head>
 <body>
@@ -34,17 +33,13 @@
                 </div>
             </div>
         </div>
-
-        
         <div class="saved-reaction-user-info saved-reaction-item">
             <button class="ui button saved-reaction-user-display" id="userDisplay">
                 <i class="icon user"></i>
                 User : {{user_name}}
             </button>
         </div>
-        
     </div>
-    
     <div class="top-bar">
         <div class="dropdown" id="dropdown" style="display: none;">
             <div class="dropdown-content">
@@ -142,6 +137,7 @@
                 <tr>
                     <th>Select</th>
                     <th>Name</th>
+                    <th>Description</th> 
                     <th>Subsystem</th>
                     <th>Substrates</th>
                     <th>Direction</th>
@@ -150,19 +146,41 @@
                     <th>Mass Balanced?</th>
                     <th>Charge Balanced?</th>
                     <th>Actions</th>
-                </tr>
+                </tr>                
             </thead>        
             <tbody>
                 {% for item in combined_reactions_details %}
                 <tr>
                     <td><input type="checkbox" class="reaction-checkbox" data-reaction-id="{{ item.reaction.id }}"></td>
                     <td>
-                        {{ item.details.short_name }}
+                        <span class="reaction-name"
+                              data-reaction-id="{{ item.reaction.id }}"
+                              data-current-name="{{ item.details.short_name }}">
+                            {{ item.details.short_name }}
+                        </span>
+                        <input type="text" class="reaction-name-input"
+                               data-reaction-id="{{ item.reaction.id }}"
+                               value="{{ item.details.short_name }}"
+                               style="display: none; width: 100px;">
                         {% for flag in item.details.flags %}
                             <i class="fas fa-flag" style="color: {{ flag.color }}; margin-left: 5px;" title="{{ flag.name }}"></i>
                         {% endfor %}
-                    </td>
-                    
+                    </td>                                     
+                    <td>
+                        {% if item.details.description %}
+                            <button class="ui button view-description-btn"
+                                    data-description="{{ item.details.description }}"
+                                    data-reaction-id="{{ item.reaction.id }}">
+                                View Description
+                            </button>
+                        {% else %}
+                            <span class="no-description"
+                                  data-reaction-id="{{ item.reaction.id }}"
+                                  data-description="">
+                                No Description
+                            </span>
+                        {% endif %}
+                    </td>                                   
                     <td>{{ item.details.subsystem }}</td>
                     <td>{{ item.details.subs_details }}</td>
                     <td>{{ item.details.direction }}</td>
@@ -194,20 +212,18 @@
                     </td>
                 </tr>
                 {% endfor %}
-            </tbody>
-                  
+            </tbody>            
         </table>
         {% else %}
         <p>No reactions saved.</p>
         {% endif %}
     </div>
-    <script type="text/javascript">
-
-
+<script type="text/javascript">
     const addToVMHUrl = "{% url 'add_to_vmh' %}";
     const prepAddToVMHUrl = "{% url 'prepare_add_to_vmh' %}";
     const csrfToken = '{{ csrf_token }}';
     const userID = '{{ userID }}';
+    const editReactionURL = "{% url 'edit_reaction_info' %}";
     var reactions = {{ reactions_json|safe }};
 </script>
         <script src="{% static 'reactions/js_savedreactions/reactionChecking.js' %}"></script>
@@ -218,6 +234,19 @@
         <script src="{% static 'reactions/js_savedreactions/utilities.js' %}"></script>
         <script src="{% static 'reactions/js_savedreactions/handleAdd2VMH.js' %}"></script>
         <script src="{% static 'reactions/js_savedreactions/search_reaction.js' %}"></script>
-        
 </body>
+{% comment %} <div id="descriptionModal" class="ui modal">
+    <div class="header">Reaction Description</div>
+    <div class="content">
+        <p id="descriptionText"></p>
+    </div>
+    <div class="actions">
+        <!-- Edit button (will only be used when there is an existing description) -->
+        <button class="ui button" id="editDescriptionModalBtn"
+                data-reaction-id="">
+            Edit Description
+        </button>
+        <button class="ui button" id="closeDescriptionModal">Close</button>
+    </div>
+</div> {% endcomment %}
 </html>

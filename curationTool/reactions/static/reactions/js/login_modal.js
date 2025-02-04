@@ -46,9 +46,7 @@ document.getElementById('loginForm').addEventListener('submit', function (event)
               sessionStorage.setItem('userName', data.userName);
               document.getElementById('userDisplay').innerHTML = `<i class="icon user"></i> User: ${data.userName}`;
               document.getElementById('loginButton').textContent = 'Log out';
-
-
-              setLoggedInStatusBasedOnUrl();
+              setLoggedInStatusBasedOnUrl('');
               // Hide the login modal after successful login
               $('#loginModal').modal('hide');
               // Show the task modal

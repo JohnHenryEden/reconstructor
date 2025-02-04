@@ -30,3 +30,164 @@ function attachDynamicEventListeners() {
         }
     });
 }  
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Function to enable name editing
+    function enableNameEditing(event) {
+        let span = event.target;
+        let input = span.nextElementSibling;
+        if (input && input.classList.contains("reaction-name-input")) {
+            span.style.display = "none";
+            input.style.display = "inline-block";
+            input.focus();
+        }
+    }
+
+    // Function to save edited name
+    async function saveEditedName(event) {
+        let input = event.target;
+        let newName = input.value.trim();
+        let span = input.previousElementSibling;
+        let reactionId = input.getAttribute("data-reaction-id");
+
+        if (!newName || newName === span.textContent) {
+            span.style.display = "inline-block";
+            input.style.display = "none";
+            return;
+        }
+
+        try {
+            let response = await fetch(editReactionURL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken,
+                },
+                body: JSON.stringify({
+                    reaction_id: reactionId,
+                    new_name: newName,
+                }),
+            });
+
+            let data = await response.json();
+
+            if (data.success) {
+                span.textContent = newName;
+            } else {
+                alert("Error updating reaction name.");
+            }
+        } catch (error) {
+            console.error("Failed to update reaction name:", error);
+        }
+
+        // Hide input and show updated name
+        span.style.display = "inline-block";
+        input.style.display = "none";
+    }
+
+    // Attach event listeners
+    document.querySelectorAll(".reaction-name").forEach(span => {
+        span.addEventListener("click", enableNameEditing);
+    });
+
+    document.querySelectorAll(".reaction-name-input").forEach(input => {
+        // Save on pressing Enter
+        input.addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                saveEditedName(event);
+            }
+        });
+
+        // Save when clicking outside input
+        input.addEventListener("blur", saveEditedName);
+    });
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".view-description-btn, .no-description").forEach(button => {
+        button.addEventListener("click", function () {
+            const reactionId = button.getAttribute("data-reaction-id");
+            const description = button.getAttribute("data-description") || "";
+    
+            // Create modal dynamically
+            const modal = document.createElement("div");
+            modal.className = "ui modal";
+            modal.id = "descriptionModal";
+            modal.innerHTML = `
+                <div class="header">Reaction Description</div>
+                <div class="content">
+                    <p id="descriptionText">${description || "No Description Available"}</p>
+                </div>
+                <div class="actions">
+                    <button class="ui button" id="editDescriptionModalBtn" data-reaction-id="${reactionId}">Edit Description</button>
+                    <button class="ui button" id="closeDescriptionModal">Close</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+    
+            // Attach event listener to close the modal
+            modal.querySelector("#closeDescriptionModal").addEventListener("click", function () {
+                $(modal).modal("hide");
+            });
+    
+            // Attach event listener to edit description
+            modal.querySelector("#editDescriptionModalBtn").addEventListener("click", function () {
+                const reactionId = this.getAttribute("data-reaction-id");
+                const currentDescription = modal.querySelector("#descriptionText").textContent;
+                const contentDiv = modal.querySelector(".content");
+    
+                // Replace content with an input field
+                contentDiv.innerHTML = `
+                    <textarea id="editDescriptionInput" style="width:100%;height:100px;">${currentDescription === "No Description Available" ? "" : currentDescription}</textarea>
+                    <button class="ui blue button" id="saveDescriptionBtn">Save</button>
+                `;
+    
+                // Save button logic
+                modal.querySelector("#saveDescriptionBtn").addEventListener("click", async function () {
+                    const newDescription = modal.querySelector("#editDescriptionInput").value.trim();
+                    if (!newDescription) return;
+    
+                    try {
+                        const response = await fetch(editReactionURL, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": csrfToken,
+                            },
+                            body: JSON.stringify({
+                                reaction_id: reactionId,
+                                new_description: newDescription,
+                            }),
+                        });
+    
+                        const data = await response.json();
+                        if (data.success) {
+                            // Update UI dynamically
+                            const descriptionSpan = document.querySelector(`.no-description[data-reaction-id="${reactionId}"]`);
+                            if (descriptionSpan) {
+                                descriptionSpan.textContent = newDescription;
+                                descriptionSpan.classList.remove("no-description"); // Remove class since it's no longer empty
+                            }
+    
+                            // Hide modal
+                            $(modal).modal("hide");
+                            // Refresh the page to show updated description
+                            window.location.reload();
+                        } else {
+                            alert("Error updating description.");
+                        }
+                    } catch (error) {
+                        console.error("Failed to update description:", error);
+                    }
+                });
+            });
+    
+            // Initialize and remove modal from DOM after closing
+            $(modal).modal({
+                onHidden: function () {
+                    modal.remove();
+                }
+            }).modal("show");
+        });
+    }); 
+});

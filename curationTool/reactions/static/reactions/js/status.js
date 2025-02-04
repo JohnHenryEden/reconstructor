@@ -1,23 +1,29 @@
-
 function setLoggedInStatusBasedOnUrl(reactionData) {
+    let status = '';
+    let dotClass = '';
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const reactionId = urlParams.get('reaction_id');
-
-    const action = urlParams.get('action');
-    let status = "Creating reaction";
-    let dotClass = "dot-blue";
-
-    if (action != "edit" && reactionId != null) {
-        status = "Viewing reaction";
-        dotClass = "dot-green"; 
-    } else if (reactionId == null && action != "edit") {
+    if (reactionData === '') {
         status = "Creating Reaction";
         dotClass = "dot-red"; 
-    }
-    else {
-        status = "Editing reaction"+" "+reactionData;   
-        dotClass = "dot-orange"; 
+    } else {
+        const urlParams = new URLSearchParams(window.location.search);
+        const reactionId = urlParams.get('reaction_id');
+        const action = urlParams.get('action');
+        let reactionName = reactionData.name;
+        let reactionDescription = reactionData.description;
+
+        if (action !== "edit" && reactionId !== null) {
+            status = `Viewing reaction <br>
+                      <span class="reaction-name" data-tooltip-this="${reactionDescription}">${reactionName}</span>`;
+            dotClass = "dot-green";
+        } else if (reactionId === null && action !== "edit") {
+            status = "Creating Reaction";
+            dotClass = "dot-red"; 
+        } else {
+            status = `Editing reaction <br>
+                      <span class="reaction-name" data-tooltip-this="${reactionDescription}">${reactionName}</span>`;
+            dotClass = "dot-orange";
+        }
     }
 
     const statusElement = document.getElementById('statusTitle');

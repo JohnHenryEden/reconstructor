@@ -47,7 +47,6 @@ document.getElementById('registerForm').addEventListener('submit', function (eve
             document.getElementById('loginButton').textContent = 'Log out';
             // Hide the modal after successful registration
             $('#registerModal').modal('hide');
-            setLoggedInStatusBasedOnUrl();  
         } else {
             alert(data.message);
         }
