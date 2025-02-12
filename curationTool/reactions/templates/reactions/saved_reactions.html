@@ -168,18 +168,19 @@
                     </td>                                     
                     <td>
                         {% if item.details.description %}
-                            <button class="ui button view-description-btn"
-                                    data-description="{{ item.details.description }}"
-                                    data-reaction-id="{{ item.reaction.id }}">
-                                View Description
-                            </button>
-                        {% else %}
-                            <span class="no-description"
-                                  data-reaction-id="{{ item.reaction.id }}"
-                                  data-description="">
-                                No Description
-                            </span>
-                        {% endif %}
+                        <button class="ui button view-description-btn"
+                                data-description="{{ item.details.description }}"
+                                data-reaction-id="{{ item.reaction.id }}"
+                                data-content="{{ item.details.description|escape }}">
+                            View Description
+                        </button>
+                    {% else %}
+                        <span class="no-description"
+                              data-reaction-id="{{ item.reaction.id }}"
+                              data-description="">
+                            No Description
+                        </span>
+                    {% endif %}                                     
                     </td>                                   
                     <td>{{ item.details.subsystem }}</td>
                     <td>{{ item.details.subs_details }}</td>

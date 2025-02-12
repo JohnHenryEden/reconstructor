@@ -1,7 +1,6 @@
 
 import json
-from django.views.decorators.csrf import csrf_exempt
-from reactions.models import User, Reaction, MetabolitesAddedVMH, ReactionsAddedVMH, Subsystem
+from reactions.models import User, Reaction, MetabolitesAddedVMH, ReactionsAddedVMH, Subsystem, SavedMetabolite
 from reactions.reaction_info import construct_vmh_formula
 from reactions.utils.search_vmh import search_metabolites_vmh, is_name_in_vmh
 from reactions.utils.to_smiles import any_to_smiles
@@ -13,8 +12,51 @@ from reactions.utils.search_vmh import check_reaction_vmh, get_from_vmh
 import requests
 import os
 from django.http import JsonResponse
-import logging
+from django.core.exceptions import ObjectDoesNotExist
+from django.views.decorators.csrf import csrf_exempt
 
+
+def get_metabolite_abbrs(reaction_objs, attr_key, attr_type_key, attr_name_key, matlab_session):
+    """
+    Retrieves abbreviations for metabolites in a reaction. 
+    If the metabolite type is 'Saved', it attempts to retrieve the abbreviation from the SavedMetabolite model. 
+    If the abbreviation doesn't exist, it generates one.
+
+    Args:
+        reaction_objs (list): List of Reaction objects.
+        attr_key (str): Attribute name for the metabolite list (e.g., 'substrates' or 'products').
+        attr_type_key (str): Attribute name for the metabolite type list (e.g., 'substrates_types' or 'products_types').
+        attr_name_key (str): Attribute name for the metabolite name list (e.g., 'substrates_names' or 'products_names').
+        matlab_session: MATLAB session for abbreviation generation.
+
+    Returns:
+        list: A list of lists containing abbreviations for each reaction's metabolites.
+    """
+    abbr_list = []
+
+    for reaction in reaction_objs:
+        reaction_abbrs = []
+        metabolites = json.loads(getattr(reaction, attr_key))
+        metabolite_types = json.loads(getattr(reaction, attr_type_key))
+        metabolite_names = json.loads(getattr(reaction, attr_name_key))
+
+        for met, met_type, met_name in zip(metabolites, metabolite_types, metabolite_names):
+            if met_type == 'Saved':
+                try:
+                    saved_metabolite = SavedMetabolite.objects.get(id=int(met))
+                    abbr = saved_metabolite.vmh_abbr
+                    if not abbr:  # Generate if abbreviation doesn't exist
+                        abbr = gen_metabolite_abbr(met, met_type, met_name, search_metabolites_vmh, matlab_session)
+                except ObjectDoesNotExist:
+                    # If the saved metabolite doesn't exist, generate abbreviation
+                    abbr = gen_metabolite_abbr(met, met_type, met_name, search_metabolites_vmh, matlab_session)
+            else:
+                abbr = gen_metabolite_abbr(met, met_type, met_name, search_metabolites_vmh, matlab_session)
+
+            reaction_abbrs.append(abbr)
+        abbr_list.append(reaction_abbrs)
+
+    return abbr_list
 
 def get_vmh_subsystems():
     BASE_URL = 'https://www.vmh.life/'
@@ -73,7 +115,6 @@ def prepare_add_to_vmh(request):
         return JsonResponse({'status': 'error',
                              'message': 'Invalid request method. Use POST instead.'},
                             status=400)
-
     try:
         request_data = json.loads(request.body)
         reactionIds = request_data['reactionIds']
@@ -109,38 +150,8 @@ def prepare_add_to_vmh(request):
         ] for reaction in reaction_objs]
 
         matlab_session = MatlabSessionManager()
-        subs_abbr = [
-            [
-                gen_metabolite_abbr(
-                    sub,
-                    sub_type,
-                    sub_name,
-                    search_metabolites_vmh,
-                    matlab_session) for sub,
-                sub_type,
-                sub_name in zip(
-                    json.loads(
-                        reaction.substrates),
-                    json.loads(
-                        reaction.substrates_types),
-                    json.loads(
-                        reaction.substrates_names))] for reaction in reaction_objs]
-        prods_abbr = [
-            [
-                gen_metabolite_abbr(
-                    prod,
-                    prod_type,
-                    prod_name,
-                    search_metabolites_vmh,
-                    matlab_session) for prod,
-                prod_type,
-                prod_name in zip(
-                    json.loads(
-                        reaction.products),
-                    json.loads(
-                        reaction.products_types),
-                    json.loads(
-                        reaction.products_names))] for reaction in reaction_objs]
+        subs_abbr = get_metabolite_abbrs(reaction_objs, 'substrates', 'substrates_types', 'substrates_names', matlab_session)
+        prods_abbr = get_metabolite_abbrs(reaction_objs, 'products', 'products_types', 'products_names', matlab_session)
 
         subs_need_new_names = [[] for _ in reactionIds]
         prods_need_new_names = [[] for _ in reactionIds]
@@ -196,9 +207,9 @@ def create_formula_abbr(request):
             metabolite_name = data.get('metabolite_name')
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
+        
         # Ensure all required fields are present
-        if not all([metabolite, mtype, metabolite_name]):
+        if not all([mtype, metabolite_name]):
             return JsonResponse({'error': 'Missing data'}, status=400)
 
         # Initialize Matlab session manager
@@ -301,6 +312,7 @@ def add_to_vmh(request):
         json.loads(
             Reaction.objects.get(
                 pk=reaction['pk']).prod_found) for reaction in reactions]
+    
     subs_names_vmh, subs_abbr_vmh, prods_names_vmh, prods_abbr_vmh = check_met_names_abbrs_vmh(
         reactions_new_subsInfo, reactions_new_prodsInfo, reactions_subs_found, reactions_prods_found)
     if True in list(subs_names_vmh.values()):
@@ -443,7 +455,7 @@ def add_to_vmh(request):
             names = unique_names
             formulas, charges = smiles_to_charged_formula(smiles)
             json_paths = met_prepare_json_paths_and_variables(
-                abbrs, names, formulas, charges, inchikeys, smiles)
+                abbrs, names, formulas, charges, inchikeys, smiles) #TODO: add mol_weight and external links
             matlab_result = add_metabolites_matlab(json_paths, matlab_session)
             for path in json_paths:
                 os.remove(path)

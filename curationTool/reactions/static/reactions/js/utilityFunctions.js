@@ -46,14 +46,14 @@ window.ReactionUtils.fetchTemplates = async function (templateList, templatesFet
 };
 
 // Function to show a toast notification
-function showToast(message) {
+function showToast(message, color = '#4caf50') {
     // Create the toast container
     const toast = document.createElement('div');
     toast.textContent = message;
     toast.style.position = 'fixed';
     toast.style.bottom = '20px';
     toast.style.right = '20px';
-    toast.style.backgroundColor = '#4caf50'; // Success green
+    toast.style.backgroundColor = color;
     toast.style.color = '#fff';
     toast.style.padding = '10px 20px';
     toast.style.borderRadius = '8px';
@@ -75,4 +75,41 @@ function showToast(message) {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 500); // Remove after fade-out
     }, 3000);
+}
+
+// Function to save the current visibility state of each div
+function updateLocalStorageState() {
+    const visibleState = {};
+    for (const [buttonId, divName] of Object.entries(button_to_div)) {
+        const div = document.getElementsByName(divName + '-div')[0];
+        if (div) {
+            visibleState[divName] = (div.style.display === 'block');
+        }
+    }
+    localStorage.setItem('visibleDivs', JSON.stringify(visibleState));
+}
+
+// Function to restore the saved visibility state on page load
+function restoreVisibleDivs() {
+    const savedState = localStorage.getItem('visibleDivs');
+    if (!savedState) return;
+    const visibleState = JSON.parse(savedState);
+    for (const [divName, isVisible] of Object.entries(visibleState)) {
+        const div = document.getElementsByName(divName + '-div')[0];
+        if (div) {
+            div.style.display = isVisible ? 'block' : 'none';
+            // Find the corresponding button and update its active class
+            const buttonId = Object.keys(button_to_div).find(key => button_to_div[key] === divName);
+            if (buttonId) {
+                const button = document.getElementById(buttonId);
+                if (button) {
+                    if (isVisible) {
+                        button.classList.add('active');
+                    } else {
+                        button.classList.remove('active');
+                    }
+                }
+            }
+        }
+    }
 }

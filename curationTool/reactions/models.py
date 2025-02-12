@@ -70,7 +70,10 @@ class Reaction(models.Model):
     reaction_signature = models.TextField(blank=True, null=True, help_text="Unique identifier for reaction matching")
     description = models.TextField(blank=True, null=True) 
 
-
+    metabolite_smiles = models.TextField(blank=True, null=True) 
+    metabolite_inchis = models.TextField(blank=True, null=True)
+    metabolite_inchi_keys = models.TextField(blank=True, null=True)
+    metabolite_mol_weights = models.TextField(blank=True, null=True)
 
 class ReactionsAddedVMH(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -181,3 +184,64 @@ class ReactionTemplate(models.Model):
     description = models.TextField(blank=True, null=True)
     def __str__(self):
         return f"{self.name} (Default: {self.is_default})"
+
+class SavedMetabolite(models.Model):
+    owner = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE,
+        related_name='owned_metabolites'
+    )
+    shared_with = models.ManyToManyField(
+        User,
+        related_name='shared_metabolites',
+        blank=True
+    )
+    name = models.CharField(max_length=255) # Common name
+    inchi_key = models.CharField(max_length=27, unique=True)  # InChIKey is 27 characters
+    inchi = models.TextField(blank=True, null=True) # IUPAC International Chemical Identifier
+    smiles = models.TextField(blank=True, null=True) # Simplified molecular-input line-entry system
+    mol_w = models.FloatField(blank=True, null=True) # Molecular weight
+    mol_file = models.TextField()  # Store the MDL molfile
+    mol_formula = models.TextField(blank=True, null=True) # Molecular formula
+    vmh_abbr = models.CharField(max_length=255, blank=True, null=True) # VMH abbreviation
+    source_type = models.CharField(max_length=50, choices=[ 
+        ('draw', 'Draw'),
+        ('mol_file', 'MDL Mol File'),
+        ('chebi', 'ChEBI'),
+        ('swisslipids', 'SwissLipids'),
+        ('pubchem', 'PubChem'),
+    ])
+    original_identifier = models.CharField(max_length=255, blank=True, null=True) # Original identifier from the source
+    date_created = models.DateTimeField(auto_now_add=True) # Date the metabolite was saved
+
+        # External Links Section
+    keggId = models.CharField(max_length=50, null=True, blank=True)
+    pubChemId = models.CharField(max_length=50, null=True, blank=True)
+    cheBlId = models.CharField(max_length=50, null=True, blank=True)
+    hmdb = models.CharField(max_length=50, null=True, blank=True)
+    chembl = models.CharField(max_length=50, null=True, blank=True)
+    biggId = models.CharField(max_length=191, null=True, blank=True)
+    lmId = models.CharField(max_length=150, null=True, blank=True)
+    ehmnId = models.CharField(max_length=50, null=True, blank=True)
+    hepatonetId = models.CharField(max_length=50, null=True, blank=True)
+    pdmapName = models.CharField(max_length=150, null=True, blank=True)
+    biocyc = models.CharField(max_length=150, null=True, blank=True)
+    chemspider = models.CharField(max_length=150, null=True, blank=True)
+    drugbank = models.CharField(max_length=150, null=True, blank=True)
+    food_db = models.CharField(max_length=150, null=True, blank=True)
+    wikipedia = models.CharField(max_length=150, null=True, blank=True)
+    metanetx = models.CharField(max_length=50, null=True, blank=True)
+    seed = models.CharField(max_length=50, null=True, blank=True)
+    knapsack = models.CharField(max_length=150, null=True, blank=True)
+    metlin = models.CharField(max_length=150, null=True, blank=True)
+    casRegistry = models.CharField(max_length=150, null=True, blank=True)
+    iupac = models.TextField(null=True, blank=True)
+    epa_id = models.CharField(max_length=150, null=True, blank=True)
+    echa_id = models.CharField(max_length=150, null=True, blank=True)
+    fda_id = models.CharField(max_length=150, null=True, blank=True)
+    iuphar_id = models.CharField(max_length=150, null=True, blank=True)
+    mesh_id = models.CharField(max_length=150, null=True, blank=True)
+    chodb_id = models.CharField(max_length=150, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.inchi_key})"

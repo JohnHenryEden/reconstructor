@@ -1,4 +1,24 @@
 document.addEventListener('DOMContentLoaded', async function () {
+    $('#savedMetabolitesModal').modal();
+
+    $('#userDropdown').dropdown({
+        action: 'hide',
+        onChange: function(value, text, $selectedItem) {
+            if ($selectedItem.attr('id') === 'dropdown-saved-reactions') {
+                userId = sessionStorage.getItem('userID');
+                if (userId) {
+                    window.location.href = '/saved_reactions';
+                }
+                else{
+                    var errorMessage = 'Please login to view saved reactions.';
+                    showErrorModal(errorMessage);
+                }
+            } else if ($selectedItem.attr('id') === 'dropdown-saved-metabolites') {
+                loadSavedMetabolites();
+                $('#savedMetabolitesModal').modal('show');
+            }
+        }
+    });
     if (sessionStorage.getItem('userID') !== null) {
         username = sessionStorage.getItem('userName');
         userID = sessionStorage.getItem('userID');
@@ -46,6 +66,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             })
             .then(async reactionData => {
                 await updateFormFields(reactionData);
+                reactionData.substrates = ['test'];
                 confirmAll();
                 displayDivs(reactionData);
                 if (reactionData.short_name) {
@@ -102,13 +123,9 @@ async function updateSubsystems() {
         return subsystemList;
     }
 }
-
-
 function createnewreaction() {
     // Get the input element by its ID
     const resetbutton = document.getElementById('ResetButton');
-
-
     // Add an event listener to the input element to handle the click event
     resetbutton.addEventListener('click', function (event) {
         // Prevent the default form submission behavior

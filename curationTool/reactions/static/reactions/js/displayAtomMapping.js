@@ -56,7 +56,7 @@ function loadAtomMappingDiv(reactionData) {
                 if (e.originalEvent.deltaY < 0) {
                     currentScale += 0.2; // Zoom in
                 } else {
-                    currentScale = Math.max(0.5, currentScale - 0.2); // Zoom out
+                    currentScale = Math.max(0.2, currentScale - 0.2); // Zoom out
                 }
                 
                 // Remove the old blowup events and lens
@@ -89,8 +89,5 @@ function loadAtomMappingDiv(reactionData) {
                 );
             });
         });       
-    
-        // Ensure the contentDiv is visible
-        contentDiv.style.display = 'block';
     }
 }

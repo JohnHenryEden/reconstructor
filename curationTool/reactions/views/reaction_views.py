@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.core import serializers
 from django.views.decorators.csrf import csrf_exempt
 from reactions.forms import ReactionForm
-from reactions.models import User, CreatedReaction, Reaction, ReactionsAddedVMH
+from reactions.models import User, CreatedReaction, Reaction, ReactionsAddedVMH, SavedMetabolite
 from django.views.decorators.http import require_POST
 from reactions.utils.utils import safe_json_loads
 from reactions.reaction_info import get_reaction_info
@@ -20,8 +20,12 @@ from django.conf import settings
 from django.views.decorators.http import require_GET
 from .user_views import validate_user_ID
 from django.shortcuts import get_object_or_404
-from rdkit.Chem import MolToInchiKey
-
+from django.db.models import Q
+from rdkit.Chem import MolToInchiKey, Descriptors, AllChem
+from rdkit.Chem.rdMolDescriptors import CalcMolFormula, CalcExactMolWt
+from rdkit.Chem.Descriptors import MolWt
+import rdkit.Chem as Chem
+from reactions.utils.to_mol import smiles_with_explicit_hydrogens
 
 
 def input_reaction(request):
@@ -41,6 +45,8 @@ def input_reaction(request):
         action = request.POST.get('action')
         form = ReactionForm(request.POST, request.FILES)
         user_id = request.POST.get('userID')
+        user = User.objects.get(pk=user_id) if user_id else None
+
         if action == 'edit':
             reaction_id = request.POST.get('reaction_id')
             try:
@@ -79,6 +85,9 @@ def input_reaction(request):
         prod_comp = request.POST.getlist('prod_comps')
         substrates_types = request.POST.getlist('substrates_type')
         products_types = request.POST.getlist('products_type')
+        if ('Saved' in substrates_types or 'Saved' in products_types) and not user:
+            return JsonResponse(
+                {'status': 'error', 'message': 'Cannot use saved metabolites without signing in.'})
         direction = request.POST.get('direction')
         subs_sch = [int(s) for s in subs_sch]
         prod_sch = [int(s) for s in prod_sch]
@@ -101,7 +110,7 @@ def input_reaction(request):
             context = {'form': form, 'error_message': error_message}
             return render(request, 'reactions/Home_page.html', context)
 
-        metabolite_formulas, metabolite_charges, metabolite_mol_file_strings, stereo_counts, stereo_locations_list = get_mol_info(
+        smiles, inchis, inchi_keys, mol_weights, metabolite_formulas, metabolite_charges, metabolite_mol_file_strings, stereo_counts, stereo_locations_list = get_mol_info(
             subs_mols + prod_mols)
         metabolite_names = substrates_names + products_names
         reaction_rxn_file = construct_reaction_rxnfile(
@@ -122,7 +131,6 @@ def input_reaction(request):
         reaction.save()
 
         # Skip atom mapping if any product fields are empty or only one
-        # substrate is provided
         skip_atom_mapping = request.POST.get('skipAtomMapping') == 'true' or (
             len(substrates_list) == 1 and len(products_list) == 0)
         if skip_atom_mapping:
@@ -174,6 +182,61 @@ def input_reaction(request):
             settings.MEDIA_ROOT,
             settings.MEDIA_URL,
             side='products')
+        # Save non-VMH metabolites
+        if user:
+            def save_metabolites(metabolites, found_list, names, types, user,substrates=True):
+                all_inchi_keys = [MolToInchiKey(mol) for mol in metabolites]
+                for i, (mol, found) in enumerate(zip(metabolites, found_list)):
+                    if not found and user:
+                        mol_smiles = Chem.MolToSmiles(mol, allHsExplicit=True)
+                        mol_smiles = smiles_with_explicit_hydrogens(mol_smiles)
+                        mol = Chem.MolFromSmiles(mol_smiles)
+                        mol = Chem.AddHs(mol, explicitOnly=True)
+                        inchi_key = MolToInchiKey(mol)
+                        smiles = Chem.MolToSmiles(mol)
+                        inchi = Chem.MolToInchi(mol)
+                        mol_w = MolWt(mol)
+                        mol_formula = CalcMolFormula(mol)
+                        try:
+                            if AllChem.EmbedMolecule(mol, AllChem.ETKDG()) != 0:
+                                raise ValueError("Embedding failed for molecule.")
+                            AllChem.UFFOptimizeMolecule(mol)  # Optimize 3D structure
+                            mol_file = Chem.MolToMolBlock(mol)
+                        except Exception as e:
+                            mol_file = Chem.MolToMolBlock(mol)
+                        # Check if the metabolite already exists for the user (owner or shared)
+                        if not SavedMetabolite.objects.filter(
+                            Q(owner=user) | Q(shared_with=user),
+                            inchi_key=inchi_key
+                        ).exists():
+                            # Create a new metabolite with the user as the owner
+                            obj = SavedMetabolite.objects.create(
+                                owner=user,
+                                name=names[i],
+                                inchi_key=inchi_key,
+                                inchi=inchi,
+                                smiles=smiles,
+                                mol_w=mol_w,
+                                mol_formula=mol_formula,
+                                mol_file=mol_file,
+                                source_type=types[i],
+                                original_identifier=types[i]
+                            )
+                            obj.save()
+                        else:
+                            # Get the existing metabolite 
+                            obj = SavedMetabolite.objects.filter(
+                            Q(owner=user) | Q(shared_with=user),
+                            inchi_key=inchi_key).first()
+
+                        list_to_update = substrates_list if substrates else products_list
+                        type_list = substrates_types if substrates else products_types
+                        type_list[i] = 'Saved'
+                        list_to_update[i] = obj.pk
+
+
+            save_metabolites(subs_mols, subs_found, substrates_names, substrates_types, user,substrates=True)
+            save_metabolites(prod_mols, prod_found, products_names, products_types, user,substrates=False)
 
         # Assign the values directly to the reaction instance
         reaction.Organs = json.dumps(organs)
@@ -210,6 +273,10 @@ def input_reaction(request):
             vmh_found['formula']) if vmh_found['found'] else None
         reaction.metabolite_names = json.dumps(metabolite_names)
         reaction.metabolite_formulas = json.dumps(metabolite_formulas)
+        reaction.metabolite_smiles = json.dumps(smiles)
+        reaction.metabolite_inchis = json.dumps(inchis)
+        reaction.metabolite_inchi_keys = json.dumps(inchi_keys)
+        reaction.metabolite_mol_weights = json.dumps(mol_weights)
         reaction.metabolite_charges = json.dumps(metabolite_charges)
         reaction.metabolite_mol_file_strings = json.dumps(
             metabolite_mol_file_strings)
@@ -262,6 +329,24 @@ def get_reaction(request, reaction_id):
     """
     try:
         reaction = Reaction.objects.get(pk=reaction_id)
+        if not reaction.metabolite_smiles:
+            metabolite_smiles, metabolite_inchis, metabolite_inchi_keys, metabolite_mol_weights = [], [], [], []
+            for mol_file in json.loads(reaction.metabolite_mol_file_strings):
+                mol = Chem.MolFromMolBlock(mol_file)
+                mol = Chem.AddHs(mol, explicitOnly=True)
+                smiles = Chem.MolToSmiles(mol)
+                inchi = Chem.MolToInchi(mol)
+                inchi_key = MolToInchiKey(mol)
+                metabolite_smiles.append(smiles)
+                metabolite_inchis.append(inchi)
+                metabolite_inchi_keys.append(inchi_key)
+                metabolite_mol_weights.append(MolWt(mol))
+            reaction.metabolite_smiles = json.dumps(metabolite_smiles)
+            reaction.metabolite_inchis = json.dumps(metabolite_inchis)
+            reaction.metabolite_inchi_keys = json.dumps(metabolite_inchi_keys)
+            reaction.metabolite_mol_weights = json.dumps(metabolite_mol_weights)
+            reaction.save()
+
         reaction_data = {
             'Organs': reaction.Organs,
             'reaction_id': reaction.id,
@@ -303,13 +388,15 @@ def get_reaction(request, reaction_id):
             'metabolite_mol_file_strings': safe_json_loads(reaction.metabolite_mol_file_strings),
             'stereo_counts': safe_json_loads(reaction.stereo_counts),
             'stereo_locations_list': safe_json_loads(reaction.stereo_locations_list),
+            'metabolite_smiles': safe_json_loads(reaction.metabolite_smiles),
+            'metabolite_inchis': safe_json_loads(reaction.metabolite_inchis),
+            'metabolite_inchi_keys': safe_json_loads(reaction.metabolite_inchi_keys),
+            'metabolite_mol_weights': safe_json_loads(reaction.metabolite_mol_weights),
         }
-        print(reaction_data['stereo_counts'])
-        print(reaction_data['stereo_locations_list'])
-
         return JsonResponse(reaction_data)
-
+    
     except Reaction.DoesNotExist:
+
         return JsonResponse({'error': 'Reaction not found'}, status=404)
 
     except Exception as e:
@@ -695,30 +782,6 @@ def saved_reactions(request, modal=False):
         return render(request, 'reactions/error.html',
                       {'error_message': 'Invalid key'})
 
-
-def search_reactions(request):
-    user = request.user
-    query = request.GET.get('q', '')
-    if query:
-        reactions = user.saved_reactions.filter(
-            substrates__icontains=query) | user.saved_reactions.filter(
-            products__icontains=query) | user.saved_reactions.filter(
-            short_name__icontains=query) | user.saved_reactions.filter(
-            direction__icontains=query)
-    else:
-        reactions = user.saved_reactions.all()
-    reactions_data = [
-        {
-            'substrates': reaction.substrates,
-            'products': reaction.products,
-            'short_name': reaction.short_name,
-            'direction': reaction.direction,
-            # Add more fields if needed
-        }
-        for reaction in reactions
-    ]
-    return JsonResponse({'reactions': reactions_data})
-
 def identical_reaction(request):
     """
     Checks if the user already has a saved reaction that matches the
@@ -880,7 +943,7 @@ def reaction_name_exists(request):
         except (KeyError, ValueError):
             return JsonResponse({'error': 'Invalid data'}, status=400)
 
-
+    
 def get_available_reactions(request):
     """Return the IDs of available reactions for the given user."""
     if request.method == 'POST':

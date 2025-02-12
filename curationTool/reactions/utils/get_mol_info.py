@@ -1,4 +1,5 @@
-from rdkit.Chem.rdMolDescriptors import CalcMolFormula
+from rdkit.Chem.rdMolDescriptors import CalcMolFormula, CalcExactMolWt
+from rdkit.Chem.Descriptors import MolWt
 import rdkit.Chem as Chem
 from rdkit.Chem import AllChem
 from reactions.reaction_info import calculate_total_charge
@@ -8,6 +9,7 @@ from reactions.utils.to_mol import smiles_with_explicit_hydrogens
 def get_mol_info(mols):
     formulas, charges, mol_file_strings = [], [], []
     stereo_counts, stereo_locations_list = [], []
+    smiles, inchi_keys, inchis, mol_weights = [], [], [], []
 
     for mol in mols:
         # Update property cache and calculate formula and charge
@@ -24,8 +26,11 @@ def get_mol_info(mols):
         except Exception as e:
             print(f"Error processing molecule: {e}")
             continue
-
-        # Embed 3D coordinates if necessary
+        smiles.append(mol_smiles)
+        inchi_keys.append(Chem.MolToInchiKey(mol))
+        inchis.append(Chem.MolToInchi(mol))
+        mol_weights.append(MolWt(mol))
+        # Embed 3D coordinates 
         try:
             if AllChem.EmbedMolecule(mol, AllChem.ETKDG()) != 0:
                 raise ValueError("Embedding failed for molecule.")
@@ -53,4 +58,4 @@ def get_mol_info(mols):
         stereo_locations_list.append(stereo_locations)
 
     # Return gathered information
-    return formulas, charges, mol_file_strings, stereo_counts, stereo_locations_list
+    return smiles, inchis, inchi_keys, mol_weights, formulas, charges, mol_file_strings, stereo_counts, stereo_locations_list

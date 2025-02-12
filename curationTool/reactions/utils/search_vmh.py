@@ -299,7 +299,7 @@ def get_vmh_miriam(abbr):
 
 def search_metabolites_vmh(
         mols,
-        type,
+        types,
         request,
         side='substrates',
         nofile=False,
@@ -319,11 +319,11 @@ def search_metabolites_vmh(
     founds = []
     miriams = []
     file_idx = 0  # Initialize file index
-    for idx, type in enumerate(type):
-        if type == 'VMH':
+    for idx, this_type in enumerate(types):
+        if this_type == 'VMH':
             found = True
             miriam = get_vmh_miriam(mols[idx])
-        elif type == 'SwissLipids':
+        elif this_type == 'SwissLipids':
             base_url = 'https://www.swisslipids.org/api/index.php/entity/'
             endpoint = f"{base_url}{mols[idx]}"
             response = requests.get(endpoint, verify=False)
@@ -344,7 +344,7 @@ def search_metabolites_vmh(
                     found, miriam = search_vmh(m, return_abbr=return_abbr)
                 else:
                     found, miriam = False, ''
-        elif type == 'PubChem ID':
+        elif this_type == 'PubChem ID':
             base_url = 'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/'
             endpoint = f"{base_url}{mols[idx]}/property/CanonicalSMILES,InChI/JSON"
             response = requests.get(endpoint, verify=False)
@@ -368,7 +368,7 @@ def search_metabolites_vmh(
                     found, miriam = search_vmh(m, return_abbr=return_abbr)
                 else:
                     found, miriam = False, ''
-        elif type == 'MDL Mol file':
+        elif this_type == 'MDL Mol file':
             if nofile:
                 temp_file_path = mols[idx]
             else:
@@ -388,7 +388,7 @@ def search_metabolites_vmh(
             except BaseException:
                 found = False
                 miriam = ''
-        elif type == 'Draw':
+        elif this_type == 'Draw':
             mol_file = unquote(mols[idx])
             with NamedTemporaryFile(delete=False, suffix='.mol', mode='w+') as temp_file:
                 temp_file.write(mol_file)
@@ -401,14 +401,17 @@ def search_metabolites_vmh(
             except BaseException:
                 found = False
                 miriam = ''
-        elif type == 'ChEBI ID' or type == 'ChEBI Name':
-            mol_objs, errors, _ = any_to_mol([mols[idx]], [type], None, None)
+        elif this_type == 'ChEBI ID' or this_type == 'ChEBI Name':
+            mol_objs, errors, _ = any_to_mol([mols[idx]], [this_type], None, None)
             mol_obj, error = mol_objs[0], errors[0]
             if error:
                 found = False
                 miriam = ''
             else:
                 found, miriam = search_vmh(mol_obj, return_abbr=return_abbr)
+        elif this_type == 'Saved':
+            found = False
+            miriam = ''
         else:
             raise Exception('Invalid type')
         founds.append(found)

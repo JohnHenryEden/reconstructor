@@ -47,36 +47,29 @@ function fillMetaboliteInfoTab(data) {
             if (structureContainer.style.display === 'none') {
                 structureContainer.style.display = 'block';
                 this.textContent = 'Hide 3D Structure';
-        
+
                 if (!structureContainer.hasAttribute('data-viewer-initialized')) {
                     structureContainer.style.height = '400px';
                     structureContainer.style.width = '400px';
                     structureContainer.style.position = 'relative';
-        
-                    let config = { backgroundColor: 'white' };
-                    let viewer = new $3Dmol.createViewer(structureContainer, config);
+
+                    let viewer = new $3Dmol.createViewer(structureContainer, { backgroundColor: 'white' });
                     let molecularData = data.metabolite_mol_file_strings[index];
-                    let format = 'sdf';
-        
-                    let model = viewer.addModel(molecularData, format);
+
+                    let model = viewer.addModel(molecularData, 'sdf');
                     viewer.setStyle({}, {
                         stick: { radius: 0.15, colorscheme: 'Jmol' },
                         sphere: { scale: 0.25, colorscheme: 'Jmol' }
-                    });                    
-                    if (data.stereo_locations_list) {
+                    });
 
+                    if (data.stereo_locations_list) {
                         let stereoLocations = data.stereo_locations_list[index];
                         for (const loc of stereoLocations) {
-                            viewer.setStyle({ model: model, index: loc }, 
-                                            { stick: {color: 'magenta' } });
+                            viewer.setStyle({ model: model, index: loc }, { stick: { color: 'magenta' } });
                         }
                     }
-                    viewer.setClickable({}, true, function(atom, _viewer, _event, _container) {
-                        viewer.addLabel(atom.atom, { 
-                            position: atom, 
-                            backgroundColor: 'darkgreen', 
-                            backgroundOpacity: 0.8 
-                        });
+                    viewer.setClickable({}, true, function(atom) {
+                        viewer.addLabel(atom.atom, { position: atom, backgroundColor: 'darkgreen', backgroundOpacity: 0.8 });
                     });
                     viewer.zoomTo();
                     viewer.render();
@@ -92,19 +85,25 @@ function fillMetaboliteInfoTab(data) {
         toggleDiv.appendChild(toggleButton);
         metaboliteDiv.appendChild(toggleDiv);
 
-        const formulaElement = document.createElement('p');
-        formulaElement.textContent = `Charged Formula: ${data.metabolite_formulas[index]}`;
-        metaboliteDiv.appendChild(formulaElement);
-        // check if data has stereo_counts and stereo_locations_list
-        if (data.stereo_counts || data.stereo_locations_list) {
+        // **Compact Info Table**
+        const infoTable = document.createElement('div');
+        infoTable.classList.add('metabolite-info-grid');
+        infoTable.innerHTML = `
+            <div class="info-item"><strong>Charged Formula:</strong> ${data.metabolite_formulas[index] || 'N/A'}</div>
+            <div class="info-item"><strong>SMILES:</strong> ${data.metabolite_smiles[index] || 'N/A'}</div>
+            <div class="info-item"><strong>InChI:</strong> ${data.metabolite_inchis[index] || 'N/A'}</div>
+            <div class="info-item"><strong>InChI Key:</strong> ${data.metabolite_inchi_keys[index] || 'N/A'}</div>
+            <div class="info-item"><strong>Molecular Weight:</strong> ${data.metabolite_mol_weights[index] || 'N/A'} g/mol</div>
+        `;
+        metaboliteDiv.appendChild(infoTable);
 
+        // Stereo count (if exists)
+        if (data.stereo_counts || data.stereo_locations_list) {
             const stereoCount = data.stereo_counts[index];
             const stereoCountElement = document.createElement('p');
-            if (stereoCount > 0) {
-                stereoCountElement.textContent = `Number of unspecified Stereo Centers: ${stereoCount} (magenta in the 3D viewer)`;
-            } else {
-                stereoCountElement.textContent = 'No unspecified stereo centers detected.';
-            }
+            stereoCountElement.textContent = stereoCount > 0
+                ? `Number of unspecified Stereo Centers: ${stereoCount} (magenta in 3D viewer)`
+                : 'No unspecified stereo centers detected.';
             metaboliteDiv.appendChild(stereoCountElement);
         }
 
@@ -116,6 +115,7 @@ function fillMetaboliteInfoTab(data) {
         metaboliteInfoContainer.appendChild(metaboliteDiv);
     });
 }
+
 
 
 function toggleStructure() {

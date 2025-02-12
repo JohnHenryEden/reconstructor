@@ -763,3 +763,196 @@ footer {
     gap: 15px;
     margin-top: 12px;
 }
+
+.autocomplete-container {
+    position: relative;
+    display: inline-block;
+    width: 25%;
+}
+.autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.autocomplete-input {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+.autocomplete-option {
+    padding: 5px 10px;
+    cursor: pointer;
+}
+.autocomplete-option:hover {
+    background-color: #f0f0f0;
+}
+.metab-abbr {
+    font-weight: bold;
+}
+.metab-name {
+    margin-left: 5px;
+}
+
+/* User dropdown styling */
+.ui.dropdown .menu {
+    margin-top: 10px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+}
+
+#userDropdown {
+    margin-right: 10px;
+}
+
+.ui.dropdown .menu .item {
+    padding: 12px 16px !important;
+    font-size: 14px;
+}
+
+.ui.dropdown .menu .item:hover {
+    background: #f5f5f5 !important;
+}
+
+.ui.dropdown .divider {
+    margin: 5px 0 !important;
+}
+/* More specific selector to override the inline-block */
+.ui.items > .item > .content > .header.savedMetabolite-header {
+    display: flex !important;          /* Override inline-block with flex */
+    align-items: center;               /* Center items vertically */
+    justify-content: space-between;    /* Space between left content and delete button */
+    cursor: pointer;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+}
+
+/* Group the toggle, abbr, and name neatly */
+.savedMetabolite-header .left-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;                         /* Space between items */
+}
+
+/* Delete button styling */
+.delete-btn {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+.delete-btn:hover {
+    background-color: #c0392b;
+}
+
+/* Toggle arrow rotation */
+.savedMetabolite-header .toggle-arrow {
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.savedMetabolite-header.active .toggle-arrow {
+    transform: rotate(90deg);
+}
+
+/* Compact layout adjustments */
+.compact-info-grid {
+    padding: 10px 0;
+    row-gap: 10px;  /* Space between rows */
+}
+
+.compact-info-list .item {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 0.9em;
+    border-bottom: 1px dashed #ddd;
+}
+
+.compact-info-list .item:last-child {
+    border-bottom: none;
+}
+
+.compact-info-list strong {
+    min-width: 120px;  /* Fixed width for alignment */
+    font-weight: bold;
+    color: #555;
+}
+
+.ui.form.small-form .field {
+    margin-bottom: 8px;
+}
+
+.readonly-field {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 5px;
+    cursor: not-allowed;
+    color: #555;
+}
+
+.structure-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+.external-links-container{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    flex-direction: row;
+}
+.twofields{
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-direction: column;
+}
+.links-container{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    flex-direction: row;
+    
+}
+#savedMetabolitesSearchContainer {
+    display: flex;
+    align-items: center;
+  }
+
+#savedMetabolitesSearchContainer input#metaboliteSearchInput {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#savedMetabolitesSearchContainer input#metaboliteSearchInput:focus {
+    outline: none;
+    border-color: #66afe9;
+    box-shadow: 0 0 5px rgba(102, 175, 233, 0.6);
+    }
+  
+.share-checkbox {
+    transform: scale(1.5);  /* Adjust the value as needed (e.g., 1.5 = 150% size) */
+    margin-right: 8px;      /* Add spacing to keep alignment clean */
+    cursor: pointer;        /* Optional: Adds a pointer cursor for better UX */
+}

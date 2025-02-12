@@ -1,12 +1,16 @@
 import json
 import pandas as pd
-from django.http import JsonResponse
 from reactions.utils.search_vmh import search_vmh
 from reactions.utils.to_mol import any_to_mol
 from reactions.utils.utils import capitalize_first_letter
 from reactions.utils.get_from_rhea import get_from_rhea
+from reactions.models import SavedMetabolite, User
 import requests
-
+from django.views.decorators.csrf import csrf_exempt
+from django.forms.models import model_to_dict
+from django.http import JsonResponse
+from django.db.models import Q
+import rdkit.Chem as Chem
 
 def verify_metabolite(request):
     """
@@ -14,8 +18,9 @@ def verify_metabolite(request):
     """
     main_input = request.POST.get('metabolite')
     input_type = request.POST.get('type')
+
     if main_input.strip() == '' and input_type in [
-            'VMH', 'SwissLipids', 'ChEBI ID', 'ChEBI Name', 'PubChem ID']:
+            'VMH', 'SwissLipids', 'ChEBI ID', 'ChEBI Name', 'PubChem ID', 'Saved']:
         return JsonResponse({'error': True, 'message': 'No input provided'})
     if input_type == 'VMH':
         BASE_URL = 'https://www.vmh.life/'
@@ -49,6 +54,30 @@ def verify_metabolite(request):
                     'error': True,
                     'message': f'VMH API returned error {response.status_code} for metabolite `{main_input}`'},
                 status=500)
+        
+    elif input_type == 'Saved':
+        user_id = request.POST.get('userID')
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({'error': True, 'message': 'Cannot use saved metabolite without signing in'})
+
+        # Look up the metabolite by primary key, checking if the user is the owner or shared with
+        try:
+            saved_met = SavedMetabolite.objects.get(
+                Q(owner=user) | Q(shared_with=user),
+                pk=main_input
+            )
+        except SavedMetabolite.DoesNotExist:
+            return JsonResponse({'error': True, 'message': f'Saved metabolite with id `{main_input}` not found'}, status=404)
+
+        return JsonResponse({
+            'found': False,
+            'abbr': saved_met.vmh_abbr,
+            'name': saved_met.name,
+            'input_type': input_type
+        })
+        
     else:
         mols, errors, names = any_to_mol(
             [main_input], [input_type], request, side=None)
@@ -59,12 +88,92 @@ def verify_metabolite(request):
             mol, return_abbr=True, return_name=True)
         name = nameVMH if found else name
         name = capitalize_first_letter(name)
-        return JsonResponse({'found': found,
-                             'abbr': abbr,
-                             'name': name,
-                             'miriam': miriam,
-                             'input_type': input_type})
+        inchi_key = Chem.MolToInchiKey(mol)
+        user_id = request.POST.get('userID')
+        if not user_id:
+            user = None
+        else:
+            user = User.objects.get(pk=user_id)
+        saved_exists, name_in_db = False, ''
 
+        if user:
+            # Check if the metabolite exists in the database for the current user (owner or shared)
+            saved_met_obj = SavedMetabolite.objects.filter(
+                Q(owner=user) | Q(shared_with=user),
+                inchi_key=inchi_key
+            ).distinct()
+            
+            if saved_met_obj.exists():
+                saved_exists = True
+                name_in_db = saved_met_obj.first().name
+
+        return JsonResponse({
+            'found': found,
+            'abbr': abbr,
+            'name': name,
+            'miriam': miriam,
+            'input_type': input_type,
+            'saved_exists': saved_exists,
+            'name_in_db': name_in_db
+        })
+
+def get_saved_metabolites(request):
+    user_id = request.GET.get('user_id')
+    if not user_id:
+        return JsonResponse({'metabolites': []})
+
+    user = User.objects.get(pk=user_id)
+    
+    # Get both owned and shared metabolites
+    saved_metabolites = SavedMetabolite.objects.filter(
+        Q(owner=user) | Q(shared_with=user)
+    ).distinct()
+    metabolites_list = []
+    for met in saved_metabolites:
+        external_links = {
+            'keggId': met.keggId,
+            'pubChemId': met.pubChemId,
+            'cheBlId': met.cheBlId,
+            'hmdb': met.hmdb,
+            'chembl': met.chembl,
+            'biggId': met.biggId,
+            'lmId': met.lmId,
+            'ehmnId': met.ehmnId,
+            'hepatonetId': met.hepatonetId,
+            'pdmapName': met.pdmapName,
+            'biocyc': met.biocyc,
+            'chemspider': met.chemspider,
+            'drugbank': met.drugbank,
+            'food_db': met.food_db,
+            'wikipedia': met.wikipedia,
+            'metanetx': met.metanetx,
+            'seed': met.seed,
+            'knapsack': met.knapsack,
+            'metlin': met.metlin,
+            'casRegistry': met.casRegistry,
+            'iupac': met.iupac,
+            'epa_id': met.epa_id,
+            'echa_id': met.echa_id,
+            'fda_id': met.fda_id,
+            'iuphar_id': met.iuphar_id,
+            'mesh_id': met.mesh_id,
+            'chodb_id': met.chodb_id
+        }
+
+        metabolites_list.append({
+            'id': met.id,
+            'name': met.name,
+            'vmh_abbr': met.vmh_abbr or '',
+            'inchi_key': met.inchi_key, 
+            'inchi': met.inchi,
+            'smiles': met.smiles,
+            'mol_w': met.mol_w,
+            'mol_formula': met.mol_formula,
+            'mol_file': met.mol_file,
+            'external_links': external_links  # Include external links here
+        })
+    
+    return JsonResponse({'metabolites': metabolites_list})
 
 def fetch_rhea_rxn(request):
     if request.method == 'POST':
@@ -81,3 +190,85 @@ def fetch_rhea_rxn(request):
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
     else:
         return JsonResponse({'error': 'Invalid request'}, status=400)
+
+# views.py
+@csrf_exempt
+def update_metabolite(request, metabolite_id):
+    if request.method == 'PUT':
+        try:
+            metabolite = SavedMetabolite.objects.get(id=metabolite_id)
+            data = json.loads(request.body)
+            for field, value in data.items():
+                if value.strip() == '' and field == 'name':
+                    return JsonResponse({'status': 'error', 'message': f'{field} field cannot be empty'}, status=400)
+                setattr(metabolite, field, value)
+            metabolite.save()
+            # Return updated data for the front end to patch the row without resetting the modal
+            updated_metabolite = model_to_dict(metabolite, exclude=['shared_with'])
+            return JsonResponse({'status': 'success', 'metabolite': updated_metabolite})
+        except SavedMetabolite.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Metabolite not found'}, status=404)
+
+@csrf_exempt
+def delete_metabolite(request, metabolite_id):
+    if request.method == 'DELETE':
+        try:
+            metabolite = SavedMetabolite.objects.get(id=metabolite_id)
+            metabolite.delete()
+            return JsonResponse({'status': 'success'})
+        except SavedMetabolite.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Metabolite not found'}, status=404)
+        
+def share_metabolites(request):
+    try:
+        data = json.loads(request.body)
+        metabolite_ids = data.get('metabolite_ids', [])
+        target_username = data.get('target_username')
+        sharing_user_id = data.get('sharing_user_id')
+        sharing_user = User.objects.get(pk=sharing_user_id)
+        if not sharing_user:
+            return JsonResponse({'status': 'error', 'message': 'Not logged in'}, status=401)
+
+        if not metabolite_ids or not target_username:
+            return JsonResponse({'status': 'error', 'message': 'Metabolite IDs and target username are required.'}, status=400)
+        
+        try:
+            target_user = User.objects.get(name=target_username)
+
+        except User.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Target user not found.'}, status=404)
+        
+        if target_user == sharing_user:
+            return JsonResponse({'status': 'error', 'message': 'Cannot share metabolites with yourself.'}, status=400)
+        #Check if the user is shared_with not owner for any of the metabolites
+        metabolites_shared_with_user = SavedMetabolite.objects.filter(id__in=metabolite_ids, shared_with=sharing_user)
+        if metabolites_shared_with_user.exists():
+            names = [met.name for met in metabolites_shared_with_user]
+            return JsonResponse({'status': 'error', 'message': 'Must be the owner to share metabolites. \nYou are not the owner of the following metabolites: ' + ', '.join(names)}, status=400)
+        
+        # Only share metabolites where the current user is the owner.
+        metabolites = SavedMetabolite.objects.filter(id__in=metabolite_ids, owner=sharing_user)
+        if not metabolites.exists():
+            return JsonResponse({'status': 'error', 'message': 'No valid metabolites found to share.'}, status=400)
+        shared_count = 0
+        for metabolite in metabolites:
+            if target_user not in metabolite.shared_with.all():
+                metabolite.shared_with.add(target_user)
+                shared_count += 1
+        already_shared = len(metabolite_ids) - shared_count
+        if already_shared > 0:
+            msg = f'Shared {shared_count} metabolites with {target_username}. {already_shared} metabolites were already shared.'
+        else:
+            msg = f'Shared {shared_count} metabolites with {target_username}.'
+
+        return JsonResponse({'status': 'success', 'message': msg})
+    
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+def generate_abbreviation(request):
+    if request.method == 'POST':
+        # Implement your abbreviation generation logic here
+        name = json.loads(request.body).get('name')
+        generated_abbr = name[:3].upper()  # Example simple generation
+        return JsonResponse({'abbr': generated_abbr})

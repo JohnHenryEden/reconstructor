@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import User, Reaction, ReactionsAddedVMH, MetabolitesAddedVMH, Subsystem, CreatedReaction, Flag, ReactionTemplate
+from .models import User, Reaction, ReactionsAddedVMH, MetabolitesAddedVMH, Subsystem, CreatedReaction, Flag, ReactionTemplate, SavedMetabolite
+
 
 
 class CreatedReactionInline(admin.TabularInline):
@@ -90,7 +91,20 @@ class ReactionTemplateAdmin(admin.ModelAdmin):
         }),
     )
 
-
+class SavedMetaboliteAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'owner',
+        'name',
+        'inchi_key',
+        'vmh_abbr',
+        'source_type',
+        'original_identifier',
+        'date_created')  # Customize list display
+    search_fields = ('name', 'inchi_key', 'vmh_abbr',
+                     'source_type', 'original_identifier')  # Fields to search by
+    list_filter = ('source_type',)  # Add filter for source_type
+    readonly_fields = ('date_created',)  # Make date_created read-only
 admin.site.register(User, UserAdmin)
 admin.site.register(Reaction, ReactionAdmin)
 admin.site.register(ReactionsAddedVMH)
@@ -99,3 +113,4 @@ admin.site.register(Subsystem)
 admin.site.register(CreatedReaction, CreatedReactionAdmin)
 admin.site.register(Flag, FlagAdmin)
 admin.site.register(ReactionTemplate, ReactionTemplateAdmin)
+admin.site.register(SavedMetabolite, SavedMetaboliteAdmin)

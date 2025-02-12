@@ -13,15 +13,17 @@ var button_to_div = {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Restore saved div visibility states
+    restoreVisibleDivs();
+    // Also refresh side buttons so they reflect the current state
+    refreshSideButtons();
     var buttons = document.querySelectorAll('.dynamic-button-side-button');
     buttons.forEach(function(button) {
-        // Check if the button id is in the button_to_div object
         if (button.id in button_to_div) {
             button.addEventListener('click', function() {
                 const divName = button_to_div[button.id];
                 const div = document.getElementsByName(divName + '-div')[0];
 
-                // Toggle the visibility of the clicked div
                 if (div.style.display === 'block') {
                     div.style.display = 'none';
                     button.classList.remove('active');
@@ -29,10 +31,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     div.style.display = 'block';
                     button.classList.add('active');
                 }
+                // Save the new state after each click
+                updateLocalStorageState();
             });
         }
     });
 });
+
 
 function refreshSideButtons() {
     for (const [button, div] of Object.entries(button_to_div)) {

@@ -27,7 +27,6 @@ urlpatterns = [
     path('get_reaction_details/', reaction_views.get_reaction_details, name='get_reaction_details'),
     path('delete_reaction_info/', reaction_views.delete_reaction_info, name='delete_reaction_info'),
     path('saved_reactions/reactions/clone/', reaction_views.clone_reaction_view, name='clone_reaction'),
-    path('search_reactions/', reaction_views.search_reactions, name='search_reactions'),
     path('user-reactions-vmh/', reaction_views.get_user_reactions_and_vmh, name='get_user_reactions_and_vmh'),
     path('get_reaction/<int:reaction_id>/', reaction_views.get_reaction, name='get_reaction'),
     path('update_gene_info/', reaction_views.update_gene_info, name='update_gene_info'),
@@ -53,6 +52,10 @@ urlpatterns = [
 
     path('fetch_rhea_rxn', metabolite_views.fetch_rhea_rxn, name='fetch_rhea_rxn'),
     path('verify_metabolite/', metabolite_views.verify_metabolite, name='verify_metabolite'),
+    path('get_saved_metabolites/', metabolite_views.get_saved_metabolites, name='get_saved_metabolites'),
+    path('update_metabolite/<int:metabolite_id>/', metabolite_views.update_metabolite, name='update_metabolite'),
+    path('delete_metabolite/<int:metabolite_id>/', metabolite_views.delete_metabolite, name='delete_metabolite'),
+    path('share_metabolites/', metabolite_views.share_metabolites, name='share_metabolites'),
 
     path('list_templates/', template_views.list_templates, name='list_templates'),
     path('create_template/', template_views.create_template, name='create_template'),

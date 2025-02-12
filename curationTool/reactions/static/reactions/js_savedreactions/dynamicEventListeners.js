@@ -30,6 +30,9 @@ function attachDynamicEventListeners() {
         }
     });
 }  
+$(document).ready(function() {
+    $('.view-description-btn').popup();
+});
 
 document.addEventListener("DOMContentLoaded", function () {
     // Function to enable name editing

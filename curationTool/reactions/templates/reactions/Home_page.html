@@ -43,10 +43,16 @@
             <div id="reactionFoundMessage"></div>
         </div>
         <div class="user-info item">
-            <button class="ui button" id="userDisplay">
-                <i class="icon user"></i>
-                User : None
-            </button>
+            <div class="ui dropdown" id="userDropdown">
+                <button class="ui button" id="userDisplay">
+                    <i class="icon user"></i>
+                    User : None
+                </button>
+                <div class="menu">
+                    <div class="item" id="dropdown-saved-reactions">Saved Reactions</div>
+                    <div class="item" id="dropdown-saved-metabolites">Saved Metabolites</div>
+                </div>
+            </div>
             <button class="ui blue button" id="loginButton">Log In</button>
         </div>
     </div>
@@ -62,8 +68,6 @@
                 <div class="fluid ui button dynamic-button-side-button" id= "extlinks-button">External Links</div>
                 <div class="fluid ui button dynamic-button-side-button" id= "geneinfo-button">Gene Info</div>
                 <div class="fluid ui button dynamic-button-side-button" id= "comments-button">Comments</div>
-                <div id="viewsavedreactions-button" class="fluid ui button dynamic-button-side-button">View Saved Reactions
-           </div>
             <div class ="bottom"> <div class = "fluid ui button" id="view-leader-board" >View Stats</div>
                 <div class ="fluid ui button" id="item about-item">About</div> </div>
             </div>
@@ -87,11 +91,7 @@
                     <img src="{% static 'reactions/reset.png' %}" alt="Icon" style="width:16px; height:16px; vertical-align:middle; margin-right:5px;">
                     Reset
                 </button>
-                
-
             </div> 
-
-
             <div class="divs-container">
                 <div class="content-div" name = "reactants-div" style="display: block;">
                     <div class="div-header">Reactants</div>
@@ -133,6 +133,7 @@
                                         <option value="PubChem ID">PubChem ID</option>
                                         <option value="MDL Mol file">MDL Mol file</option>
                                         <option value="Draw">Draw</option>
+                                        <option value="Saved">My Metabolites</option>
                                     </select>
                                     <button type="button" id="applyAllSubsType">Apply All</button>
                                 </div>
@@ -177,6 +178,7 @@
                                         <option value="PubChem ID">PubChem ID</option>
                                         <option value="MDL Mol file">MDL Mol file</option>
                                         <option value="Draw">Draw</option>
+                                        <option value="Saved">My Metabolites</option>
                                     </select>
                                     <span class="status-dot" style="display: none;"></span>
                                     <button type="button" class="done-field-btn">Verify</button>
@@ -223,6 +225,7 @@
                                         <option value="PubChem ID">PubChem ID</option>
                                         <option value="MDL Mol file">MDL Mol file</option>
                                         <option value="Draw">Draw</option>
+                                        <option value="Saved">My Metabolites</option>
                                     </select>
                                     <button type="button" id="applyAllProdsType">Apply All</button>
                                 </div>
@@ -266,6 +269,7 @@
                                         <option value="PubChem ID">PubChem ID</option>
                                         <option value="MDL Mol file">MDL Mol file</option>
                                         <option value="Draw">Draw</option>
+                                        <option value="Saved">My Metabolites</option>
                                     </select>
                                     <span class="status-dot" style="display: none;"></span>
                                     <button type="button" class="done-field-btn">Verify</button>
@@ -295,6 +299,21 @@
                             <div class="spinner"></div>
                             <p>Creating reaction ... please wait</p>
                         </div>
+                    </div>
+                </div>
+                <div id="savedMetabolitesModal" class="ui modal">
+                    <div class="header">
+                        <h2>Manage Saved Metabolites</h2>
+                        <div id="savedMetabolitesSearchContainer" class="search-bar" style="margin-top: 10px;">
+                            <input type="text" id="metaboliteSearchInput" placeholder="Search by name or abbreviation..." class="ui input" style="width: 100%;">
+                        </div>                        
+                    </div>
+                    <div class="scrolling content">
+                        <button id="shareSelectedBtn" class="ui button">Share Selected Metabolites</button>
+
+                        <!-- Existing metabolites list -->
+                        <div class="ui divided items" id="metabolitesList"></div>
+
                     </div>
                 </div>
                 <div id="identicalReactionModal" class="ui modal identicalReactionModal">
@@ -805,6 +824,7 @@
     <script src="{% static 'reactions/js/utilityFunctions.js' %}"></script>
     <script src="{% static 'reactions/js/Creatediv.js' %}"></script> 
     <script src="{% static 'reactions/js_leaderboard/leader_board.js' %}"></script>
+    <script src="{% static 'reactions/js/savedMetabolites.js' %}"></script>
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css">
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
     <script src="{% static 'reactions/lib/blowup.js' %}"></script>  

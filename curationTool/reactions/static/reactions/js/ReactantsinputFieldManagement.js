@@ -45,12 +45,16 @@ function updatePlaceholder(selectElement, inputElement) {
             case "PubChem ID":
                 placeholderText = "PubChem ID";
                 break;
-
             case "MDL Mol file":
+                break;
+            case "Saved":
+                placeholderText = "Search...";
+                break;
             case "Draw":
                 placeholderText = ""; // No placeholder for these types
                 break;
         }
+        console.log("Setting placeholder to:", placeholderText);
         inputElement.placeholder = placeholderText;
     });
 
@@ -177,10 +181,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('select[name="products_type"], select[name="substrates_type"]').forEach(selectElement => {
         // Initial call to handle the current state
         toggleFileInput(selectElement.parentElement, selectElement.value);
+        handleMetaboliteTypeChange(selectElement);
 
         // Attach change event listener to these select elements
         selectElement.addEventListener('change', function() {
-            toggleFileInput(this.parentElement, this.value);
+            toggleFileInput(selectElement.parentElement, selectElement.value);
+            handleMetaboliteTypeChange(selectElement);
         });
     });
 });
@@ -227,17 +233,22 @@ function addField(containerId, inputName, numberName) {
     selectInputType.name = inputName + '_type';  // e.g., substrates_type or products_type
     selectInputType.id = inputName + '_type';  
 
-    ['VMH', 'ChEBI ID','ChEBI Name','SwissLipids','MDL Mol file', 'Draw','PubChem ID'].forEach(function(type) {
+    ['VMH', 'ChEBI ID','ChEBI Name','SwissLipids','MDL Mol file', 'Draw','PubChem ID', 'Saved'].forEach(function(type) {
         var option = document.createElement("option");
+        if (type === 'Saved'){
+            option.text = 'My Metabolites'; }
+        else {
+            option.text = type;
+        }
         option.value = type;
-        option.text = type;
         selectInputType.appendChild(option);
     });
     inputsGroup.appendChild(selectInputType);
 
-    // Event listener to toggle file input visibility
+    // Event listener to toggle file input visibility and handle metabolite type changes
     selectInputType.addEventListener('change', function() {
         toggleFileInput(inputsGroup, this.value);
+        handleMetaboliteTypeChange(this);
     });
     toggleFileInput(inputsGroup, selectInputType.value); // Initial toggle based on default select value
 
@@ -269,18 +280,22 @@ function addField(containerId, inputName, numberName) {
 }
 
 // Adds a field to the specified container with pre-filled data for substrates or products.
-function addFieldWithData(container, name, schName, value, schValue, compValue, type,metab_name=null) {
+function addFieldWithData(container, name, schName, value, schValue, compValue, type, metab_name = null, metab_id = null) {
     return new Promise(async (resolve, reject) => { 
         var inputsGroup = document.createElement("div");
         inputsGroup.className = "inputs-group";
+        
+        // Create and attach remove button
         var removeBtn = document.createElement("button");
-        removeBtn.type = "button"; // Prevent submission on click
+        removeBtn.type = "button";
         removeBtn.className = "ui inverted red button remove-field-btn";
         removeBtn.textContent = "X";
         removeBtn.onclick = function() {
             removeField(this);
         };
         inputsGroup.appendChild(removeBtn);
+        
+        // Create stoichiometry input
         var newNumberInput = document.createElement('input');
         newNumberInput.type = 'number';
         newNumberInput.name = schName;
@@ -288,83 +303,108 @@ function addFieldWithData(container, name, schName, value, schValue, compValue, 
         newNumberInput.min = '1';
         newNumberInput.value = schValue;
         inputsGroup.appendChild(newNumberInput);
-
+        
+        // Create main input with pre-filled value
         var newInput = document.createElement('input');
         newInput.type = 'text';
         newInput.name = name;
         newInput.id = name;
         newInput.value = value;
         inputsGroup.appendChild(newInput);
-
+        
+        // Create compartment select (e.g., subs_comps or prod_comps)
         var prod_or_subs = container.id == 'substratesDiv' ? 'subs_comps' : 'prod_comps';
         var compartmentSelect = createCompartmentSelect(prod_or_subs);
         compartmentSelect.value = compValue;
         inputsGroup.appendChild(compartmentSelect);
-
+        
+        // Create type select
         var selectInputType = document.createElement("select");
-        selectInputType.name = `${name}_type`;  // e.g., substrates_type or products_type
+        selectInputType.name = `${name}_type`;
         selectInputType.id = `${name}_type`;
-        ['VMH', 'ChEBI ID', 'ChEBI Name','SwissLipids', 'MDL Mol file', 'Draw','PubChem ID'].forEach(function(optionType) {
+        ['VMH', 'ChEBI ID', 'ChEBI Name', 'SwissLipids', 'MDL Mol file', 'Draw', 'PubChem ID', 'Saved'].forEach(function(optionType) {
             var option = document.createElement("option");
             option.value = optionType;
-            option.text = optionType;
-            if (type === optionType) { // Set the correct type
+            option.text = (optionType === 'Saved') ? 'My Metabolites' : optionType;
+            if (type === optionType) { 
                 option.selected = true;
             }
             selectInputType.appendChild(option);
         });
         inputsGroup.appendChild(selectInputType);
-
+        
+        // Attach the change event listener for toggling file input and handling type changes.
+        selectInputType.addEventListener('change', function() {
+            toggleFileInput(inputsGroup, this.value);
+            handleMetaboliteTypeChange(this);
+        });
+        toggleFileInput(inputsGroup, selectInputType.value); // Initial toggle
+        
+        // Create status dot and hidden text field for the metabolite name (if needed)
         var statusDot = document.createElement("span");
         statusDot.className = "status-dot";
         statusDot.style.display = "none";
         inputsGroup.appendChild(statusDot);
-
+        
         var hiddenInput = document.createElement("input");
         hiddenInput.type = "text";
         var inputName = container.id == 'substratesDiv' ? 'substrates' : 'products';
         hiddenInput.className = inputName + '-name';
         hiddenInput.name = inputName + '_name';
         hiddenInput.style.display = "none";
-        if (metab_name){
+        if (metab_name) {
             hiddenInput.value = metab_name;
         }
         inputsGroup.appendChild(hiddenInput);
-
-        selectInputType.addEventListener('change', function() {
-            toggleFileInput(inputsGroup, this.value);
-        });
-
-        toggleFileInput(inputsGroup, selectInputType.value); // Initial toggle based on default select value
+        
+        // Append the inputsGroup to the container
+        container.appendChild(inputsGroup);
+        
+        // If the field type is prefilled as 'MDL Mol file', handle async loading
         if (type === 'MDL Mol file') {
-            fileInput = inputsGroup.querySelector('input[type="file"]');
+            var fileInput = inputsGroup.querySelector('input[type="file"]');
             try {
-                await loadFileToInputField(value, fileInput); // Assume this is adjusted to directly modify `inputsGroup`
-                resolve(); // Resolve the promise once the file is loaded
+                await loadFileToInputField(value, fileInput);
+                resolve();
             } catch (error) {
-                reject(error); // Reject the promise on error
+                reject(error);
             }
         } else {
-            // If not handling an async operation, resolve immediately after setup
             resolve();
         }
+        
         updatePlaceholder(selectInputType, newInput);
+        
         var doneButton = document.createElement("button");
         doneButton.type = "button";
         doneButton.className = "done-field-btn";
         doneButton.textContent = "verify";
         inputsGroup.appendChild(doneButton);
-
-        
-        container.appendChild(inputsGroup);
-        if (type === 'Draw'){
-            addEditDrawingButton(selectInputType)
+    
+        // If the prefilled type is 'Saved', simulate the transformation into an autocomplete widget.
+        if (type === 'Saved') {
+            var group = selectInputType.closest('.inputs-group');
+            var autocompleteContainer = group.querySelector('.autocomplete-container');
+            if (autocompleteContainer) {
+                var searchInput = autocompleteContainer.querySelector('.autocomplete-input');
+                var hiddenInputField = autocompleteContainer.querySelector('input[type="hidden"]');
+                // Set the visible search input (display value) and the hidden input (ID).
+                if (searchInput) {
+                    searchInput.value = metab_name; 
+                }
+                if (hiddenInputField) {
+                    // Ensure you pass the correct saved metabolite ID (e.g. metab_id).
+                    hiddenInputField.value = value;
+                }
+            }
         }
-
+    
+        // Attach any additional event listeners.
         attachEventListenersToSelects(); 
         attachEventListenersToDoneButtons();
     });
 }
+
 function loadFileToInputField(url, fileInput) {
     // Return a new promise that resolves when the file has been loaded
     return new Promise((resolve, reject) => {
@@ -496,10 +536,123 @@ async function updateFormFields(data) {
 }
 
 
+function initAutocomplete(searchInput, hiddenInput, dropdown, metabolites) {
+    // Filter and display options as the user types
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        dropdown.innerHTML = ''; // Clear existing options
+        
+        // Filter metabolites by name or abbreviation
+        const filtered = metabolites.filter(m =>
+            m.name.toLowerCase().includes(query) ||
+            (m.vmh_abbr && m.vmh_abbr.toLowerCase().includes(query))
+        );
+        
+        filtered.forEach(m => {
+            // Create a container for this option
+            const optionDiv = document.createElement('div');
+            optionDiv.classList.add('autocomplete-option');
+            
+            // Create a span for the metabolite abbreviation
+            const abbrSpan = document.createElement('span');
+            abbrSpan.classList.add('metab-abbr');
+            abbrSpan.textContent = m.vmh_abbr ? m.vmh_abbr : 'no abbr';
+            if (!m.vmh_abbr) {
+                abbrSpan.style.color = 'grey';
+            }
+            
+            // Create a span for the metabolite name
+            const nameSpan = document.createElement('span');
+            nameSpan.classList.add('metab-name');
+            nameSpan.textContent = m.name;
+            
+            // Append both spans to the option container (with a separator)
+            optionDiv.appendChild(abbrSpan);
+            optionDiv.appendChild(document.createTextNode(' - '));
+            optionDiv.appendChild(nameSpan);
+            
+            // When an option is clicked, update the fields accordingly
+            optionDiv.addEventListener('click', function() {
+                // Show the name in the visible search input
+                searchInput.value = m.name;
+                // Store the metabolite id in the hidden input (this is what will be submitted)
+                hiddenInput.value = m.id;
+                dropdown.innerHTML = ''; // Clear the dropdown
+            });
+            
+            dropdown.appendChild(optionDiv);
+        });
+    });
+    
+    // Show the dropdown (if applicable) when the input is focused
+    searchInput.addEventListener('focus', function() {
+        searchInput.dispatchEvent(new Event('input'));
+    });
+    
+    // Hide the dropdown when the input loses focus (with a slight delay to allow clicks)
+    searchInput.addEventListener('blur', function() {
+        setTimeout(() => { dropdown.innerHTML = ''; }, 200);
+    });
+}
 
+function handleMetaboliteTypeChange(selectElement) {
+    var group = selectElement.closest('.inputs-group');
+    // Find the original text input that normally collects the metabolite value.
+    // (Assumes the first text input in the group is the one to replace.)
+    var originalInput = group.querySelector('input[type="text"]');
 
+    if (selectElement.value === 'Saved') {
+        // Create a container to hold the autocomplete elements.
+        var autocompleteContainer = document.createElement('div');
+        autocompleteContainer.classList.add('autocomplete-container');
 
+        // Create the visible search input (without a name so it isn't submitted).
+        var searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.classList.add('autocomplete-input');
+        searchInput.placeholder = 'Search saved metabolites...';
 
+        // Create a hidden input that carries the same name as the original.
+        var hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = originalInput.name; // e.g., "substrates" or "products"
+
+        // Replace the original input with the autocomplete container.
+        originalInput.parentNode.replaceChild(autocompleteContainer, originalInput);
+        autocompleteContainer.appendChild(searchInput);
+        autocompleteContainer.appendChild(hiddenInput);
+
+        // Create a container for the autocomplete dropdown.
+        var dropdown = document.createElement('div');
+        dropdown.classList.add('autocomplete-dropdown');
+        autocompleteContainer.appendChild(dropdown);
+        let userId = sessionStorage.getItem('userID');
+        // Fetch the saved metabolites, caching them globally.
+        if (!window.savedMetabolitesCache) {
+            fetch(`/get_saved_metabolites/?user_id=${userId}`)
+                .then(response => response.json())
+                .then(data => {
+                    window.savedMetabolitesCache = data.metabolites;
+                    initAutocomplete(searchInput, hiddenInput, dropdown, window.savedMetabolitesCache);
+                });
+        } else {
+            initAutocomplete(searchInput, hiddenInput, dropdown, window.savedMetabolitesCache);
+        }        
+    } else {
+        // If the select value is not "Saved" and an autocomplete container exists, revert.
+        var container = group.querySelector('.autocomplete-container');
+        if (container) {
+            var newInput = document.createElement('input');
+            newInput.type = 'text';
+            // Set the name from the hidden input in the autocomplete container.
+            newInput.name = container.querySelector('input[type="hidden"]').name;
+            newInput.required = true;
+            container.parentNode.replaceChild(newInput, container);
+            // Optionally update the placeholder based on the select's current value.
+            updatePlaceholder(selectElement, newInput);
+        }
+    }
+}
 
 // Toggles between text and file input based on the selected option in the corresponding select element.
 function toggleFileInput(container, selectValue) {
@@ -551,159 +704,173 @@ function attachEventListenersToDoneAllButtons() {
 
 
 
-    function handleDoneButtonClick(event) {
-        // Handles the 'Done' button click for each metabolite in the reaction form
-        let button = event.target;
-        if (button.parentNode.parentNode.id === 'substratesDiv') {
-            prefix = 'subs';
-            fullname = 'substrates';
+function handleDoneButtonClick(event) {
+    // Handles the 'Done' button click for each metabolite in the reaction form
+    let button = event.target;
+    if (button.parentNode.parentNode.id === 'substratesDiv') {
+        prefix = 'subs';
+        fullname = 'substrates';
+    }
+    else {
+        prefix = 'prod';
+        fullname = 'products';
+    }
+    let stoichiometryField = button.parentNode.querySelector(`input[name="${prefix}_sch"]`);
+    let main_input = button.parentNode.querySelector(`input[name="${fullname}"]`);
+    let compartmentField = button.parentNode.querySelector(`select[name="${prefix}_comps"]`);
+    let typeField = button.parentNode.querySelector(`select[name="${fullname}_type"]`);
+    if (compartmentField.value === '-') {
+        alert(`Please enter a compartment for ${fullname}`);
+        return;
+    }
+    let data = new FormData();
+    data.append('metabolite', main_input.value);
+    data.append('type', typeField.value);
+    data.append('compartment', compartmentField.value);
+    data.append('stoichiometry', stoichiometryField.value);
+    data.append('userID', sessionStorage.getItem('userID'));
+    if (typeField.value === 'Saved') {
+        main_input = main_input.parentElement; 
+    }
+    let fileInputField = button.parentNode.querySelector('input[type="file"]');
+    if (fileInputField) {
+        if (fileInputField.files.length > 0) {
+            data.append('file', fileInputField.files[0]);
+        }     
+    }
+
+    // add file in main_input if file exists
+    fetch(verifyMetabolite, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken':csrfToken
+        },
+        body: data
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showErrorModal(data.message);
+            window.scrollTo(0, 0);
+        } else {
+            // NEW: Warn the user if a saved metabolite exists
+            if (data.saved_exists) {
+                alert(`IMPORTANT: A saved metabolite named "${data.name_in_db}" already exists. \nIf you intend to use it, please select it as a 'My Metabolite' metabolite to ensure your reaction is set up correctly.`);
+            }
+            updateNameFields(data, main_input, typeField, button);
+            // below code will add a hidden text div that stores the status of the metabolite
+            let hidden_status = document.createElement('input');
+            hidden_status.style.display = 'none';
+            hidden_status.value = data.found;
+            hidden_status.className = 'valid-status';
+            main_input.parentNode.appendChild(hidden_status);
         }
-        else {
-            prefix = 'prod';
-            fullname = 'products';
-        }
-        let stoichiometryField = button.parentNode.querySelector(`input[name="${prefix}_sch"]`);
-        let main_input = button.parentNode.querySelector(`input[name="${fullname}"]`);
-        let compartmentField = button.parentNode.querySelector(`select[name="${prefix}_comps"]`);
-        let typeField = button.parentNode.querySelector(`select[name="${fullname}_type"]`);
-        if (compartmentField.value === '-') {
+    });    
+}
+    
+
+function handleDoneAllButtonClick(event) {
+    let button = event.target;
+    let prefix, fullname;
+
+    if (button.parentNode.parentNode.id === 'substratesDiv') {
+        prefix = 'subs';
+        fullname = 'substrates';
+    } else {
+        prefix = 'prod';
+        fullname = 'products';
+    }
+
+    let container = button.parentNode.parentNode;
+    let compartmentFields = container.querySelectorAll(`select[name="${prefix}_comps"]`);
+
+    // Check all compartment fields
+    for (let i = 0; i < compartmentFields.length; i++) {
+        if (compartmentFields[i].value === '-') {
             alert(`Please enter a compartment for ${fullname}`);
             return;
         }
-        let data = new FormData();
-        data.append('metabolite', main_input.value);
-        data.append('type', typeField.value);
-        data.append('compartment', compartmentField.value);
-        data.append('stoichiometry', stoichiometryField.value);
-        let fileInputField = button.parentNode.querySelector('input[type="file"]');
-        if (fileInputField) {
-            if (fileInputField.files.length > 0) {
-                data.append('file', fileInputField.files[0]);
-            }     
-        }
-    
-        // add file in main_input if file exists
-        fetch(verifyMetabolite, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken':csrfToken
-            },
-            body: data
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                showErrorModal(data.message);
-                window.scrollTo(0, 0);
+    }
 
-            } else {
-                updateNameFields(data, main_input, typeField, button);
-    
-                // handleEditButtonClick(data, main_input, typeField, button);
-                // below code will add a hidden text div that stores the status of the metabolite
-                hidden_status = document.createElement('input');
-                hidden_status.style.display = 'none';
-                hidden_status.value = data.found;
-                hidden_status.className = 'valid-status';
-                main_input.parentNode.appendChild(hidden_status);
+    let inputsGroupsInConrainer = container.querySelectorAll('.inputs-group');
+    inputsGroupsInConrainer = Array.from(inputsGroupsInConrainer);
+
+    for (let i = 0; i < inputsGroupsInConrainer.length; i++) {
+        let doneButton = inputsGroupsInConrainer[i].querySelector('.done-field-btn');
+        let validStatus = inputsGroupsInConrainer[i].querySelector('.valid-status');
+        if (validStatus == null) {
+            doneButton.click();
+        }
+    }
+}
+
+
+function updateNameFields(data = {}, main_input = null, typeField = null, button, showButton = false) {
+
+    var nameField = main_input.parentNode.querySelector('[class*="name"]');
+    nameField.style.display = 'block';
+
+    if (main_input && typeField) {
+        main_input.disabled = true;
+        typeField.disabled = true;
+        if (typeField.value === 'Saved') {
+            const textChild = main_input.querySelector('input[type="text"]');
+            if (textChild) {
+                textChild.disabled = true;
             }
-        })    }
+        }
+    }
+    button.style.display = 'none';
     
-    
-    function handleDoneAllButtonClick(event) {
-        let button = event.target;
-        let prefix, fullname;
-    
-        if (button.parentNode.parentNode.id === 'substratesDiv') {
-            prefix = 'subs';
-            fullname = 'substrates';
+    let statusDot = button.parentNode.querySelector('.status-dot');
+    if (statusDot) {
+        statusDot.style.display = 'block';
+    }
+
+    if (data && typeof updateStatusDot === 'function') {
+        updateStatusDot(statusDot, data.found, data.miriam);
+        if (data.name && nameField) {
+            nameField.value = data.name;
+        }
+    }
+    if (data.name) {
+        updateStatusDot(statusDot, data.found, data.miriam);
+        if (data.name && nameField) {
+            nameField.value = data.name;
+        }
+    }
+    if (main_input && typeField) {
+        let editDrawingButton = typeField.parentNode.querySelector('.edit-drawing-btn');
+        let startDrawingButton = typeField.parentNode.querySelector('.start-drawing-btn');
+        if (data.found) {
+            if (typeField.value === 'Draw') {
+                main_input.style.visibility = 'visible';
+            }
+            main_input.value = data.abbr;
+            typeField.value = 'VMH';
+            toggleFileInput(button.parentNode, 'VMH');
+            nameField.disabled = true;
+            if (editDrawingButton) {
+                editDrawingButton.remove();
+            }
+            if (startDrawingButton) {
+                startDrawingButton.remove();
+            }
         } else {
-            prefix = 'prod';
-            fullname = 'products';
-        }
-    
-        let container = button.parentNode.parentNode;
-        let compartmentFields = container.querySelectorAll(`select[name="${prefix}_comps"]`);
-    
-        // Check all compartment fields
-        for (let i = 0; i < compartmentFields.length; i++) {
-            if (compartmentFields[i].value === '-') {
-                alert(`Please enter a compartment for ${fullname}`);
-                return;
-            }
-        }
-    
-        let inputsGroupsInConrainer = container.querySelectorAll('.inputs-group');
-        inputsGroupsInConrainer = Array.from(inputsGroupsInConrainer);
-    
-        for (let i = 0; i < inputsGroupsInConrainer.length; i++) {
-            let doneButton = inputsGroupsInConrainer[i].querySelector('.done-field-btn');
-            let validStatus = inputsGroupsInConrainer[i].querySelector('.valid-status');
-            if (validStatus == null) {
-                doneButton.click();
-            }
-        }
-    }
-    
-    
-    function updateNameFields(data = {}, main_input = null, typeField = null, button, showButton = false) {
-    
-        var nameField = main_input.parentNode.querySelector('[class*="name"]');
-        nameField.style.display = 'block';
-    
-        if (main_input && typeField) {
-            main_input.disabled = true;
-            typeField.disabled = true;
-        }
-        button.style.display = 'none';
-        
-        let statusDot = button.parentNode.querySelector('.status-dot');
-        if (statusDot) {
-            statusDot.style.display = 'block';
-        }
-    
-        if (data && typeof updateStatusDot === 'function') {
-            updateStatusDot(statusDot, data.found, data.miriam);
-            if (data.name && nameField) {
-                nameField.value = data.name;
-            }
-        }
-        if (data.name) {
-            updateStatusDot(statusDot, data.found, data.miriam);
-            if (data.name && nameField) {
-                nameField.value = data.name;
-            }
-        }
-        if (main_input && typeField) {
-            let editDrawingButton = typeField.parentNode.querySelector('.edit-drawing-btn');
-            let startDrawingButton = typeField.parentNode.querySelector('.start-drawing-btn');
-            if (data.found) {
-                if (typeField.value === 'Draw') {
-                    main_input.style.visibility = 'visible';
-                }
-                main_input.value = data.abbr;
-                typeField.value = 'VMH';
-                if (typeof toggleFileInput === 'function') {
-                    toggleFileInput(button.parentNode, 'VMH');
-                }
+            if (typeField.value === 'Saved') {
                 nameField.disabled = true;
-                if (editDrawingButton) {
-                    editDrawingButton.remove();
-                }
-                if (startDrawingButton) {
-                    startDrawingButton.remove();
-                }
-            } else {
+            }
+            else {
                 nameField.disabled = false;
-                if (editDrawingButton) {
-                    editDrawingButton.disabled = true;
-                }
-                if (startDrawingButton) {
-                    startDrawingButton.disabled = true;
-                }
+            }
+            if (editDrawingButton) {
+                editDrawingButton.disabled = true;
+            }
+            if (startDrawingButton) {
+                startDrawingButton.disabled = true;
             }
         }
-    
     }
-    
+
+}

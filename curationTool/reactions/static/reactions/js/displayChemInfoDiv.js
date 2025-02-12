@@ -44,7 +44,6 @@ function loadChemInfoDiv(reactionData) {
 
     // Add VMH formula section
     appendVMHFormulaSection(contentDiv, reactionData);
-    contentDiv.style.display = 'block';
 }
 
 // Helper function to create the balanced text

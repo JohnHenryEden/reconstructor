@@ -12,7 +12,7 @@ import requests
 import uuid
 from reactions_project.settings import MEDIA_ROOT, MEDIA_URL
 from zeep import Client
-
+from reactions.models import SavedMetabolite
 
 def smiles_with_explicit_hydrogens(smiles):
     """
@@ -235,6 +235,26 @@ def chebi_to_mol(chebi_id, name):
     else:
         return None, f"Invalid InChI {inchi}", ''
 
+def saved_met_to_mol(id):
+    """
+    Fetches the MOL rdkit object of a metabolite from the saved metabolites database using its ID.
+
+    Input:
+    - id (int): The ID of the metabolite in the saved metabolites database.
+
+    Output:
+    - (tuple): A tuple containing the MOL object, an error message (if any), and the metabolite name.
+    """
+    try:
+        saved_met = SavedMetabolite.objects.get(pk=id)
+    except SavedMetabolite.DoesNotExist:
+        return None, f"Saved metabolite with ID {id} not found", ''
+    
+    mol = Chem.MolFromInchi(saved_met.inchi, sanitize=False, removeHs=False)
+    mol.UpdatePropertyCache(strict=False)
+    if not mol:
+        return None, f"Saved metabolite with ID {id} has an invalid InChI key", ''
+    return mol, None, saved_met.name
 
 def any_to_mol(mols, types, request, side='substrates'):
     """
@@ -264,6 +284,8 @@ def any_to_mol(mols, types, request, side='substrates'):
             mol, error, name = pubchem_id_to_mol(mols[idx])
         elif type == 'SwissLipids':
             mol, error, name = swisslipids_to_mol(mols[idx])
+        elif type == 'Saved':
+            mol, error, name = saved_met_to_mol(mols[idx])
         elif type == 'MDL Mol file':
             if request:
                 try:
