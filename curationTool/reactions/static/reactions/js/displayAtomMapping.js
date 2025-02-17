@@ -32,7 +32,6 @@ function loadAtomMappingDiv(reactionData) {
         contentDiv.appendChild(newReactionImage);
     
         let lastMousePos = { x: 0, y: 0 };
-
         newReactionImage.addEventListener('load', function() {
             let currentScale = 1.5;
         

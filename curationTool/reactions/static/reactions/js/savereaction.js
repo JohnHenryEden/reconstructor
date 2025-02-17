@@ -1,5 +1,15 @@
-// saved_reactions.js
+document.getElementById("confidenceScoreInput").addEventListener("input", function () {
+    let value = this.value.trim();
 
+    if (value === "") {
+        this.value = ""; // Allow blank (null)
+    } else {
+        let numValue = parseInt(value, 10);
+        if (isNaN(numValue) || numValue < 1 || numValue > 4) {
+            this.value = ""; // Reset invalid inputs
+        }
+    }
+});
 async function checkAndSaveReaction() {
     const urlParams = new URLSearchParams(window.location.search);
     const reactionId = urlParams.get('reaction_id');
@@ -75,7 +85,17 @@ document.addEventListener('DOMContentLoaded', function () {
     
         // Convert the color if available
         flagColor = flagColor ? rgbToHex(flagColor) : '';
-    
+
+        // Get Confidence Score
+        const confidenceScoreInput = document.getElementById("confidenceScoreInput");
+        let confidenceScore = confidenceScoreInput.value.trim() === "" ? null : parseInt(confidenceScoreInput.value);
+
+        // Ensure only valid numbers are sent (1-4) OR null
+        if (confidenceScore !== null && (confidenceScore < 1 || confidenceScore > 4)) {
+            alert("Confidence Score must be between 1 and 4.");
+            return;
+        }
+
         shortNameInput.setCustomValidity(''); // Clear any previous custom validity message
     
         if (userID && reactionId) {
@@ -93,7 +113,9 @@ document.addEventListener('DOMContentLoaded', function () {
             data.append('description', reactionDescription); // Include description
             data.append('flag_name', flagName);
             data.append('flag_color', flagColor);
-
+            if (confidenceScore !== null) {
+                data.append("confidence_score", confidenceScore); // Include confidence score
+            }
             const nameExists = await reactionNameExists(shortName, userID);
             if (nameExists) {
                 const userConfirmation = confirm(

@@ -1,6 +1,7 @@
 import random
 import requests
 import json
+from reactions.utils.MatlabSessionManager import MatlabSessionManager
 
 
 def check_reaction_abbr_exists(abbr):
@@ -46,8 +47,7 @@ def gen_metabolite_abbr(
         metabolite,
         mtype,
         metabolite_name,
-        search_func,
-        matlab_session):
+        search_func):
     if mtype == 'VMH':
         return metabolite
 
@@ -57,6 +57,7 @@ def gen_metabolite_abbr(
     if found:
         return abbr
     else:
+        matlab_session = MatlabSessionManager()
         result = matlab_session.execute('generateVMHMetAbbr', metabolite_name)
         abbr = result['result'] if result['status'] == 'success' else metabolite_name
         # abbr = abbr[-1] if isinstance(abbr, list) else abbr

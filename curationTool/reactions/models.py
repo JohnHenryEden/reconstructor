@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class User(models.Model):
     name = models.CharField(max_length=100, blank=True, null=True)
@@ -197,7 +197,7 @@ class SavedMetabolite(models.Model):
         blank=True
     )
     name = models.CharField(max_length=255) # Common name
-    inchi_key = models.CharField(max_length=27, unique=True)  # InChIKey is 27 characters
+    inchi_key = models.CharField(max_length=27)  # InChIKey is 27 characters
     inchi = models.TextField(blank=True, null=True) # IUPAC International Chemical Identifier
     smiles = models.TextField(blank=True, null=True) # Simplified molecular-input line-entry system
     mol_w = models.FloatField(blank=True, null=True) # Molecular weight
@@ -211,7 +211,7 @@ class SavedMetabolite(models.Model):
         ('swisslipids', 'SwissLipids'),
         ('pubchem', 'PubChem'),
     ])
-    original_identifier = models.CharField(max_length=255, blank=True, null=True) # Original identifier from the source
+    original_identifier = models.TextField(blank=True, null=True)  # Changed from CharField
     date_created = models.DateTimeField(auto_now_add=True) # Date the metabolite was saved
 
         # External Links Section

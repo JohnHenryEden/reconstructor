@@ -89,11 +89,12 @@ WSGI_APPLICATION = 'reactions_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'curationToolDB',
+        # 'NAME': 'curationToolDB',
+        'NAME': 'curationtooldb1',
         'USER': 'saleh',
         'PASSWORD': '1curationTool1',
-        'HOST': 'localhost',  # Or the appropriate host if not local.
-        'PORT': '5432',       # Default PostgreSQL port.
+        'HOST': 'localhost',  
+        'PORT': '5432',       
     }
 }
 

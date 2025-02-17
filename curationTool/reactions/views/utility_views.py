@@ -97,6 +97,8 @@ def parse_formula_with_compartments(request):
         for formula in formulas:
             # Normalize formula by ensuring spaces around the arrows
             formula = formula.replace('->', ' -> ').replace('<=>', ' <=> ')
+            formula = formula.replace('-> ', ' -> ').replace('<=> ', ' <=> ')
+            formula = formula.replace(' ->', ' -> ').replace(' <=>', ' <=> ')
 
             if ' -> ' in formula:
                 direction = 'forward'

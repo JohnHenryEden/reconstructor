@@ -129,6 +129,18 @@
                 Add Reaction(s) to VMH
             </button>
             <button id="addFlag" class="ui blue button add-flag-btn">Flag Reaction(s)</button>
+            <!-- Mass Edit Confidence Score -->
+            <div class="mass-edit-container">
+                <label for="massEditConfidence">Set Confidence Score:</label>
+                <select id="massEditConfidence">
+                    <option value="">-</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                </select>
+                <button id="applyMassConfidence" class="ui blue button">Apply</button>
+            </div>
         </div>
         
         {% if reactions %}
@@ -225,6 +237,7 @@
     const csrfToken = '{{ csrf_token }}';
     const userID = '{{ userID }}';
     const editReactionURL = "{% url 'edit_reaction_info' %}";
+    const updateConfidenceScoresURL = "{% url 'update_confidence_score' %}";
     var reactions = {{ reactions_json|safe }};
 </script>
         <script src="{% static 'reactions/js_savedreactions/reactionChecking.js' %}"></script>

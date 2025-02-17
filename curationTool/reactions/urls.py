@@ -37,6 +37,7 @@ urlpatterns = [
     path('saved_reactions/', reaction_views.saved_reactions, name='saved_reactions'),
     path('available_reactions', reaction_views.get_available_reactions, name='available_reactions'),
     path('edit_reaction_info/', reaction_views.edit_reaction_info, name='edit_reaction_info'),
+    path('update_confidence_score/', reaction_views.update_confidence_score, name='update_confidence_score'),
 
     path('saved_reactions/flags/<int:user_id>/', flag_views.get_user_flags, name='get_user_flags'),
     path('flags/<int:user_id>/', flag_views.get_user_flags, name='get_user_flags'),

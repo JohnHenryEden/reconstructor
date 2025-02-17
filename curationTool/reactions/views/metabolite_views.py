@@ -4,7 +4,7 @@ from reactions.utils.search_vmh import search_vmh
 from reactions.utils.to_mol import any_to_mol
 from reactions.utils.utils import capitalize_first_letter
 from reactions.utils.get_from_rhea import get_from_rhea
-from reactions.models import SavedMetabolite, User
+from reactions.models import SavedMetabolite, User, Reaction
 import requests
 from django.views.decorators.csrf import csrf_exempt
 from django.forms.models import model_to_dict
@@ -135,29 +135,7 @@ def get_saved_metabolites(request):
             'pubChemId': met.pubChemId,
             'cheBlId': met.cheBlId,
             'hmdb': met.hmdb,
-            'chembl': met.chembl,
-            'biggId': met.biggId,
-            'lmId': met.lmId,
-            'ehmnId': met.ehmnId,
-            'hepatonetId': met.hepatonetId,
-            'pdmapName': met.pdmapName,
-            'biocyc': met.biocyc,
-            'chemspider': met.chemspider,
-            'drugbank': met.drugbank,
-            'food_db': met.food_db,
-            'wikipedia': met.wikipedia,
             'metanetx': met.metanetx,
-            'seed': met.seed,
-            'knapsack': met.knapsack,
-            'metlin': met.metlin,
-            'casRegistry': met.casRegistry,
-            'iupac': met.iupac,
-            'epa_id': met.epa_id,
-            'echa_id': met.echa_id,
-            'fda_id': met.fda_id,
-            'iuphar_id': met.iuphar_id,
-            'mesh_id': met.mesh_id,
-            'chodb_id': met.chodb_id
         }
 
         metabolites_list.append({
@@ -214,10 +192,70 @@ def delete_metabolite(request, metabolite_id):
     if request.method == 'DELETE':
         try:
             metabolite = SavedMetabolite.objects.get(id=metabolite_id)
+            user_id = json.loads(request.body).get('user_id')
+            user = User.objects.get(id=user_id) if user_id else None
+
+            # Check if user is not the owner
+            if metabolite.owner != user:
+                if user in metabolite.shared_with.all():
+                    metabolite.shared_with.remove(user)
+                    metabolite.save()
+                    return JsonResponse({'status': 'success', 'message': 'Metabolite removed from your list.'})
+                else:
+                    return JsonResponse({'status': 'error', 'message': 'Permission denied.'}, status=403)
+            # User is the owner
+            # Check if metabolite is shared and transfer ownership if possible
+            shared_users = list(metabolite.shared_with.all())
+            if shared_users:
+                new_owner = shared_users[0]
+                metabolite.owner = new_owner
+                metabolite.shared_with.remove(new_owner)
+                if user in metabolite.shared_with.all():
+                    metabolite.shared_with.remove(user)
+                metabolite.save()
+                # Delete owner's reactions using this metabolite
+                user_reactions = user.saved_reactions.all()
+                affected_reactions = []
+                for reaction in user_reactions:
+                    subs = json.loads(reaction.substrates)
+                    prods = json.loads(reaction.products)
+                    if str(metabolite_id) in map(str, subs) or str(metabolite_id) in map(str, prods):
+                        affected_reactions.append(reaction)
+                # Remove reactions from user's saved_reactions
+                user.saved_reactions.remove(*affected_reactions)
+                return JsonResponse({'status': 'success', 'message': 'Ownership transferred and reactions removed.'})
+
+            # Find all reactions containing this metabolite
+            affected_reactions = []
+            all_reactions = user.saved_reactions.all()
+            for reaction in all_reactions:
+                subs = json.loads(reaction.substrates)
+                prods = json.loads(reaction.products)
+                if str(metabolite_id) in map(str, subs) or str(metabolite_id) in map(str, prods):
+                    affected_reactions.append(reaction)
+
+            confirm = request.GET.get('confirm') == 'true'
+            if not confirm and affected_reactions:
+
+                reactions_list = [{'id': r.id, 'short_name': r.short_name} for r in affected_reactions]
+                return JsonResponse({
+                    'status': 'needs_confirmation',
+                    'message': 'IMPORTANT: DELETING THIS METABOLITE WILL DELETE ALL REACTIONS THAT CONTAIN IT. ARE YOU SURE YOU WANT TO PROCEED?',
+                    'reactions': reactions_list
+                }, status=200)
+
+            # Delete affected reactions and metabolite
+            for reaction in affected_reactions:
+                user.saved_reactions.remove(reaction)  # Use the ManyToManyField manager
             metabolite.delete()
             return JsonResponse({'status': 'success'})
+
         except SavedMetabolite.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Metabolite not found'}, status=404)
+        except User.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'User not found.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
         
 def share_metabolites(request):
     try:

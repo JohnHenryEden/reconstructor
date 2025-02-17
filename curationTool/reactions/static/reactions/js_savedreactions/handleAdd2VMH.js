@@ -220,7 +220,7 @@ document.getElementById('addToVMH').addEventListener('click', async function() {
                 let subsNeedNewNamesForReaction = subsNeedNewNames[reactionIndex];
                 let prodsNeedNewNamesForReaction = prodsNeedNewNames[reactionIndex];
                 let reactionAbbrForReaction = reactionAbbrs[reactionIndex];
-
+                let confidenceScore = reaction.fields.confidence_score || " "; 
                 var listItem = document.createElement('div');
                 listItem.className = "modal-reaction-entry";
                 listItem.innerHTML = `
@@ -231,12 +231,12 @@ document.getElementById('addToVMH').addEventListener('click', async function() {
                     <text>Abbreviation:</text>
                     <input type="text" class="reaction-abbreviation-input" placeholder="Enter reaction abbreviation" value="${reaction.fields.short_name}" data-reaction-id="${reaction.pk}">
                     <label for="confidencedropdown-${reactionId}">Confidence Score:</label>
-                    <select class="confidencedropdown" id="confidencedropdown-${reactionId}" data-reaction-id="${reactionId}">
-                        <option value=" ">-</option>
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
+                    <select class="confidencedropdown" id="confidencedropdown-${reaction.pk}" data-reaction-id="${reaction.pk}">
+                        <option value=" " ${confidenceScore === " " ? "selected" : ""}>-</option>
+                        <option value="1" ${confidenceScore === "1" ? "selected" : ""}>1</option>
+                        <option value="2" ${confidenceScore === "2" ? "selected" : ""}>2</option>
+                        <option value="3" ${confidenceScore === "3" ? "selected" : ""}>3</option>
+                        <option value="4" ${confidenceScore === "4" ? "selected" : ""}>4</option>
                     </select>
                     
                     <div class= "cs-info" onclick="toggleInfo()" style="cursor: pointer;">

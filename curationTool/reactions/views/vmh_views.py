@@ -9,6 +9,7 @@ from reactions.utils.gen_vmh_abbrs import gen_metabolite_abbr
 from reactions.utils.add_to_vmh_utils import check_met_names_abbrs_vmh, check_names_abbrs_vmh, gather_reaction_details, rxn_prepare_json_paths_and_variables, met_prepare_json_paths_and_variables, add_reaction_matlab, add_metabolites_matlab, smiles_to_inchikeys, smiles_to_charged_formula, get_nonfound_metabolites
 from reactions.utils.MatlabSessionManager import MatlabSessionManager
 from reactions.utils.search_vmh import check_reaction_vmh, get_from_vmh
+from reactions.utils.utils import get_external_ids, get_mol_weights
 import requests
 import os
 from django.http import JsonResponse
@@ -16,7 +17,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.views.decorators.csrf import csrf_exempt
 
 
-def get_metabolite_abbrs(reaction_objs, attr_key, attr_type_key, attr_name_key, matlab_session):
+def get_metabolite_abbrs(reaction_objs, attr_key, attr_type_key, attr_name_key):
     """
     Retrieves abbreviations for metabolites in a reaction. 
     If the metabolite type is 'Saved', it attempts to retrieve the abbreviation from the SavedMetabolite model. 
@@ -42,17 +43,12 @@ def get_metabolite_abbrs(reaction_objs, attr_key, attr_type_key, attr_name_key, 
 
         for met, met_type, met_name in zip(metabolites, metabolite_types, metabolite_names):
             if met_type == 'Saved':
-                try:
-                    saved_metabolite = SavedMetabolite.objects.get(id=int(met))
-                    abbr = saved_metabolite.vmh_abbr
-                    if not abbr:  # Generate if abbreviation doesn't exist
-                        abbr = gen_metabolite_abbr(met, met_type, met_name, search_metabolites_vmh, matlab_session)
-                except ObjectDoesNotExist:
-                    # If the saved metabolite doesn't exist, generate abbreviation
-                    abbr = gen_metabolite_abbr(met, met_type, met_name, search_metabolites_vmh, matlab_session)
+                saved_metabolite = SavedMetabolite.objects.get(id=int(met))
+                abbr = saved_metabolite.vmh_abbr
+                if not abbr:  # Generate if abbreviation doesn't exist
+                    abbr = gen_metabolite_abbr(met, met_type, met_name, search_metabolites_vmh)
             else:
-                abbr = gen_metabolite_abbr(met, met_type, met_name, search_metabolites_vmh, matlab_session)
-
+                abbr = gen_metabolite_abbr(met, met_type, met_name, search_metabolites_vmh)
             reaction_abbrs.append(abbr)
         abbr_list.append(reaction_abbrs)
 
@@ -149,9 +145,8 @@ def prepare_add_to_vmh(request):
         prods_in_vmh = [json.loads(reaction.prod_found) if reaction.prod_found else [
         ] for reaction in reaction_objs]
 
-        matlab_session = MatlabSessionManager()
-        subs_abbr = get_metabolite_abbrs(reaction_objs, 'substrates', 'substrates_types', 'substrates_names', matlab_session)
-        prods_abbr = get_metabolite_abbrs(reaction_objs, 'products', 'products_types', 'products_names', matlab_session)
+        subs_abbr = get_metabolite_abbrs(reaction_objs, 'substrates', 'substrates_types', 'substrates_names')
+        prods_abbr = get_metabolite_abbrs(reaction_objs, 'products', 'products_types', 'products_names')
 
         subs_need_new_names = [[] for _ in reactionIds]
         prods_need_new_names = [[] for _ in reactionIds]
@@ -212,16 +207,12 @@ def create_formula_abbr(request):
         if not all([mtype, metabolite_name]):
             return JsonResponse({'error': 'Missing data'}, status=400)
 
-        # Initialize Matlab session manager
-        matlab_session = MatlabSessionManager()
-
         # Use the bypass function to force the else clause
         abbr = gen_metabolite_abbr(
             metabolite,
             mtype,
             metabolite_name,
-            bypass_search_func,
-            matlab_session)
+            bypass_search_func)
 
         # Return the abbreviation as JSON
         return JsonResponse({'abbr': abbr})
@@ -383,10 +374,10 @@ def add_to_vmh(request):
         for comment in comments:
             comment['user_name'] = user_name
             new_comments.append(comment)
-        if f"Created and Added to VMH by: {user_full_name}" not in list(
+        if f"Created and Added to VMH via Constructor by: {user_full_name}" not in list(
                 map(lambda x: x['info'], new_comments)):
             new_comments.append(
-                {'info': f"Created and Added to VMH by: {user_full_name}", 'user_name': user_name})
+                {'info': f"Created and Added to VMH via Constructor by: {user_full_name}", 'user_name': user_name})
         not_enough_info.append(
             len(new_references) < 1 and len(new_ext_links) < 1)
         no_comments.append(len(new_comments) < 2)
@@ -441,7 +432,7 @@ def add_to_vmh(request):
     reaction_identifiers, reaction_names = [
         reaction['abbreviation'] for reaction in reactions], [
         reaction.short_name for reaction in reaction_objs]
-    matlab_session = MatlabSessionManager()
+    matlab_session = None if all_vmh else MatlabSessionManager()
     if not all_vmh:
         unique_abbrs, unique_mols, unique_types, unique_names = get_nonfound_metabolites(
             reaction_objs, subs_abbr, prods_abbr, search_func=search_metabolites_vmh)
@@ -454,8 +445,10 @@ def add_to_vmh(request):
             inchikeys = smiles_to_inchikeys(smiles)
             names = unique_names
             formulas, charges = smiles_to_charged_formula(smiles)
+            external_ids_list = get_external_ids(unique_mols, unique_types)
+            mol_weights = get_mol_weights(unique_mols, unique_types)
             json_paths = met_prepare_json_paths_and_variables(
-                abbrs, names, formulas, charges, inchikeys, smiles) #TODO: add mol_weight and external links
+                abbrs, names, formulas, charges, inchikeys, smiles, external_ids_list, mol_weights)
             matlab_result = add_metabolites_matlab(json_paths, matlab_session)
             for path in json_paths:
                 os.remove(path)
@@ -504,6 +497,7 @@ def add_to_vmh(request):
         reaction_gene_info,
         reaction_comments,
         reaction_confidence_scores)
+    matlab_session = MatlabSessionManager() if not matlab_session else matlab_session
     matlab_result = add_reaction_matlab(json_paths, matlab_session)
     # Cleanup temporary JSON files
     for path in json_paths:

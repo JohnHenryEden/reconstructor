@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", function () {
         let newName = input.value.trim();
         let span = input.previousElementSibling;
         let reactionId = input.getAttribute("data-reaction-id");
-
+        let userId = sessionStorage.getItem("userID");
         if (!newName || newName === span.textContent) {
             span.style.display = "inline-block";
             input.style.display = "none";
@@ -69,6 +69,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 body: JSON.stringify({
                     reaction_id: reactionId,
                     new_name: newName,
+                    user_id: userId,
                 }),
             });
 
@@ -77,10 +78,16 @@ document.addEventListener("DOMContentLoaded", function () {
             if (data.success) {
                 span.textContent = newName;
             } else {
-                alert("Error updating reaction name.");
+                alert("Error updating reaction name: \n" + data.error);
+                if (data.original_name) {
+                    input.value = data.original_name;
+                }
             }
         } catch (error) {
             console.error("Failed to update reaction name:", error);
+            if (data.original_name) {
+                input.value = data.original_name;
+            }
         }
 
         // Hide input and show updated name

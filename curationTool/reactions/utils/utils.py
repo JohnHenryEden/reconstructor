@@ -6,6 +6,7 @@ import re
 import xml.etree.ElementTree as ET
 import requests
 import json
+from reactions.models import SavedMetabolite
 
 
 def capitalize_first_letter(s):
@@ -199,3 +200,32 @@ def get_subcellular_locations(gene_name):
 
 def safe_json_loads(data):
     return json.loads(data) if data is not None else None
+
+def get_external_ids(mols,types):
+    external_ids_list = []
+    all_external_fields = ['keggId', 'pubChemId', 'cheBlId', 'hmdb', 'metanetx']
+    for mol, met_type in zip(mols, types):
+        if met_type == 'Saved':
+            saved_metab = SavedMetabolite.objects.get(pk=mol)
+            external_ids = {
+                'keggId': saved_metab.keggId or '',
+                'pubChemId': saved_metab.pubChemId or '',
+                'cheBlId': saved_metab.cheBlId or '',
+                'hmdb': saved_metab.hmdb or '',
+                'metanetx': saved_metab.metanetx or ''
+            }
+        else:
+            external_ids = {field: '' for field in all_external_fields}
+        external_ids_list.append(external_ids)
+    return external_ids_list
+
+def get_mol_weights(mols, types):
+    mol_weights = []
+    for mol, met_type in zip(mols, types):
+        if met_type == 'Saved':
+            saved_metab = SavedMetabolite.objects.get(pk=mol)
+            mol_w = saved_metab.mol_w if saved_metab.mol_w else None
+            mol_weights.append(mol_w)
+        else:
+            mol_weights.append(None)
+    return mol_weights

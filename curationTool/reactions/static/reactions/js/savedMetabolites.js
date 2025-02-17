@@ -359,20 +359,47 @@ function toggle3DView(button, molFileBase64) {
 }
 // Handle metabolite deletion
 async function deleteMetabolite(metaboliteId) {
-    if(confirm('Are you sure you want to delete this metabolite?')) {
+    try {
         const response = await fetch(`/delete_metabolite/${metaboliteId}/`, {
             method: 'DELETE',
             headers: {
-                'X-CSRFToken': csrfToken
-            }
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify({ user_id: sessionStorage.getItem('userID') })
         });
+        const data = await response.json();
 
-        if(response.ok) {
+        if (data.status === 'needs_confirmation') {
+            // Build confirmation message with reactions list
+            let message = data.message + '\n\nReactions to be deleted:\n';
+            data.reactions.forEach(r => {
+                message += `• ${r.short_name || 'Reaction ' + r.id}\n`;
+            });
+            const isConfirmed = confirm(message);
+            if (isConfirmed) {
+                const confirmResponse = await fetch(`/delete_metabolite/${metaboliteId}/?confirm=true`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ user_id: sessionStorage.getItem('userID') })
+                });
+                const confirmData = await confirmResponse.json();
+                if (confirmData.status === 'success') {
+                    loadSavedMetabolites();
+                    showToast('Metabolite and related reactions deleted successfully.');
+                } else {
+                    showToast('Deletion failed: ' + (confirmData.message || 'Unknown error'), '#cc0000');
+                }
+            }
+        } else if (data.status === 'success') {
             loadSavedMetabolites();
-            showToast('Metabolite deleted successfully');
+            showToast(data.message || 'Metabolite deleted successfully.');
         } else {
-            showToast('Error deleting metabolite', 'error');
+            showToast('Error: ' + (data.message || 'Failed to delete metabolite.'), '#cc0000');
         }
+    } catch (error) {
+        showToast('Error: ' + error.message, '#cc0000');
     }
 }
 

@@ -48,7 +48,14 @@
     justify-content: flex-start;
     gap: 2%;
 }
-
+#confidenceScoreInput {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+    text-align: center;
+}
 .remove-field-btn{
     display: flex;
     box-sizing: border-box;

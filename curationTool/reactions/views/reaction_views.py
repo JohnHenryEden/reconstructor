@@ -26,7 +26,10 @@ from rdkit.Chem.rdMolDescriptors import CalcMolFormula, CalcExactMolWt
 from rdkit.Chem.Descriptors import MolWt
 import rdkit.Chem as Chem
 from reactions.utils.to_mol import smiles_with_explicit_hydrogens
+from rdkit import RDLogger
 
+# Suppress RDKit warnings
+RDLogger.DisableLog('rdApp.*')
 
 def input_reaction(request):
     """
@@ -99,8 +102,6 @@ def input_reaction(request):
         subsystem = request.POST.get('subsystem')
         all_errors = subs_errors + prod_errors
         if any(elem is not None for elem in all_errors):
-            print(all_errors)
-
             error_message = "\n".join(
                 [error for error in all_errors if error is not None])
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -185,7 +186,6 @@ def input_reaction(request):
         # Save non-VMH metabolites
         if user:
             def save_metabolites(metabolites, found_list, names, types, user,substrates=True):
-                all_inchi_keys = [MolToInchiKey(mol) for mol in metabolites]
                 for i, (mol, found) in enumerate(zip(metabolites, found_list)):
                     if not found and user:
                         mol_smiles = Chem.MolToSmiles(mol, allHsExplicit=True)
@@ -209,10 +209,17 @@ def input_reaction(request):
                             Q(owner=user) | Q(shared_with=user),
                             inchi_key=inchi_key
                         ).exists():
+                            print('Metabolite does not exist')
+                            print(names[i])
+                            if SavedMetabolite.objects.filter(
+                                Q(owner=user) | Q(shared_with=user),
+                                name=names[i].strip()).exists():
+                                    return JsonResponse(
+                                        {'status': 'error', 'message': f"Metabolite with name {names[i]} already exists in your saved metabolites. \nChoose a different name or use the existing metabolite."})
                             # Create a new metabolite with the user as the owner
                             obj = SavedMetabolite.objects.create(
                                 owner=user,
-                                name=names[i],
+                                name=names[i].strip(),
                                 inchi_key=inchi_key,
                                 inchi=inchi,
                                 smiles=smiles,
@@ -235,8 +242,12 @@ def input_reaction(request):
                         list_to_update[i] = obj.pk
 
 
-            save_metabolites(subs_mols, subs_found, substrates_names, substrates_types, user,substrates=True)
-            save_metabolites(prod_mols, prod_found, products_names, products_types, user,substrates=False)
+            response = save_metabolites(subs_mols, subs_found, substrates_names, substrates_types, user,substrates=True)
+            if response:
+                return response
+            response = save_metabolites(prod_mols, prod_found, products_names, products_types, user,substrates=False)
+            if response:
+                return response
 
         # Assign the values directly to the reaction instance
         reaction.Organs = json.dumps(organs)
@@ -760,6 +771,7 @@ def saved_reactions(request, modal=False):
                     'direction': reaction.direction,
                     'gene_info': gene_info_list,
                     'flags': flag_details,  # Include flag details with name and color
+                    'confidence_score': reaction.confidence_score,
                 }
             })
 
@@ -1005,9 +1017,13 @@ def edit_reaction_info(request):
             reaction_id = int(data.get('reaction_id'))
             new_name = data.get('new_name')
             new_description = data.get('new_description')
-
+            user_id = data.get('user_id')
             reaction = Reaction.objects.get(pk=reaction_id)
             if new_name is not None:
+                user_reactions = User.objects.get(pk=user_id).saved_reactions.all()
+                # Check if the new name is already used by another reaction
+                if user_reactions.filter(short_name=new_name).exists():
+                    return JsonResponse({'error': f'Reaction name "{new_name}" already exists', 'original_name': reaction.short_name}, status=400)
                 reaction.short_name = new_name
             if new_description is not None:
                 reaction.description = new_description
@@ -1017,6 +1033,25 @@ def edit_reaction_info(request):
         except Reaction.DoesNotExist:
             return JsonResponse({'error': 'Reaction does not exist'}, status=404)
         except (KeyError, ValueError, json.JSONDecodeError):
-            return JsonResponse({'error': 'Invalid data'}, status=400)
+            return JsonResponse({'error': 'Invalid data', 'original_name': reaction.short_name}, status=400)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@csrf_exempt
+def update_confidence_score(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            reaction_ids = data.get("reaction_ids", [])
+            confidence_score = data.get("confidence_score")
+
+            if not reaction_ids or confidence_score not in ["1", "2", "3", "4"]:
+                return JsonResponse({"status": "error", "message": "Invalid data."})
+
+            Reaction.objects.filter(id__in=reaction_ids).update(confidence_score=confidence_score)
+
+            return JsonResponse({"status": "success"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+
+    return JsonResponse({"status": "error", "message": "Invalid request"})

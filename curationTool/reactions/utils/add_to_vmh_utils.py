@@ -86,7 +86,9 @@ def met_prepare_json_paths_and_variables(
         met_formulas,
         met_charges,
         met_inchikeys,
-        met_smiles):
+        met_smiles,
+        met_external_links,
+        met_weights):
     """
     Prepares JSON paths and variables for MATLAB execution, saving them to temporary files.
     """
@@ -97,14 +99,18 @@ def met_prepare_json_paths_and_variables(
         f'metFormulas.json{rand_float}',
         f'metInchikeys.json{rand_float}',
         f'metSmiles.json{rand_float}',
-        f'metCharges.json{rand_float}']
+        f'metCharges.json{rand_float}',
+        f'metExternalLinks.json{rand_float}',
+        f'metWeights.json{rand_float}']
     variables = [
         met_abbrs,
         met_names,
         met_formulas,
         met_inchikeys,
         met_smiles,
-        met_charges]
+        met_charges,
+        met_external_links,
+        met_weights]
     for idx, (path, variable) in enumerate(zip(json_paths, variables)):
         path = os.path.join(os.getcwd(), path)
         json_paths[idx] = path
