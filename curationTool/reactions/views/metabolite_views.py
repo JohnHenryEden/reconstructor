@@ -60,7 +60,7 @@ def verify_metabolite(request):
         user_id = request.POST.get('userID')
         try:
             user = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
+        except (User.DoesNotExist, ValueError):
             return JsonResponse({'error': True, 'message': 'Cannot use saved metabolite without signing in'})
 
         # Look up the metabolite by primary key, checking if the user is the owner or shared with
@@ -145,9 +145,9 @@ def get_saved_metabolites(request):
             'name': reaction.short_name or f'Reaction {reaction.id}'
         }
         # Check all substrate/product IDs (stored as strings)
-        for met_id_str, met_type in zip(subs + prods, subs_types + prods_types):
+        for met_id, met_type in zip(subs + prods, subs_types + prods_types):
             if met_type == 'Saved':
-                metabolite_reactions[met_id_str].append(reaction_info)
+                metabolite_reactions[str(met_id)].append(reaction_info)
     metabolites_list = []
     for met in saved_metabolites:
         external_links = {

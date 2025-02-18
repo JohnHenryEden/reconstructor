@@ -169,158 +169,167 @@ function updateMetaboliteRow(updatedMetabolite) {
 }
 
 async function loadSavedMetabolites() {
-    const userId = sessionStorage.getItem('userID');
-    const response = await fetch(`/get_saved_metabolites/?user_id=${userId}`);
-    const { metabolites } = await response.json();
-    
     const listContainer = document.getElementById('metabolitesList');
-    listContainer.innerHTML = '';
+    listContainer.innerHTML = `
+        <div class="ui active inverted dimmer">
+            <div class="ui text loader">Loading saved metabolites...</div>
+        </div>`;
     
-    metabolites.forEach(met => {
-        console.log('Metabolite:', met);
-        const metaboliteDiv = document.createElement('div');
-        metaboliteDiv.className = 'item';
-        const externalLinksHtml = Object.entries(met.external_links || {}).map(([key, value]) => `
-        <div class="field">
-            <label>${key}</label>
-            <div class="ui action input">
-                <input type="text" value="${value || ''}" class="readonly-field" readonly data-id="${key}" data-metabolite-id="${met.id}">
-                <button class="ui button edit-button" onclick="toggleEditField(this, '${key}')">Edit</button>
+    try {
+        const userId = sessionStorage.getItem('userID');
+        const response = await fetch(`/get_saved_metabolites/?user_id=${userId}`);
+        const { metabolites } = await response.json();
+        listContainer.innerHTML = '';  // Clear the loader
+        metabolites.forEach(met => {
+            console.log('Metabolite:', met);
+            const metaboliteDiv = document.createElement('div');
+            metaboliteDiv.className = 'item';
+            const externalLinksHtml = Object.entries(met.external_links || {}).map(([key, value]) => `
+            <div class="field">
+                <label>${key}</label>
+                <div class="ui action input">
+                    <input type="text" value="${value || ''}" class="readonly-field" readonly data-id="${key}" data-metabolite-id="${met.id}">
+                    <button class="ui button edit-button" onclick="toggleEditField(this, '${key}')">Edit</button>
+                </div>
             </div>
-        </div>
-        `).join('');
-        const reactionsHtml = `
-        <div class="reactions-toggle-container">
-            <button class="ui button toggle-reactions" onclick="toggleReactions(this)">Show Reactions</button>
-            <div class="reactions-container" style="display: none;">
-                ${met.reactions.length > 0 
-                    ? `<strong>In reactions:</strong>
-                    <ul>
-                        ${met.reactions.map(r => `<li><a href="/?reaction_id=${r.id}">${r.name}</a></li>`).join('')}
-                    </ul>`
-                    : '<strong>Not used in any reactions</strong>'}
+            `).join('');
+            const reactionsHtml = `
+            <div class="reactions-toggle-container">
+                <button class="ui button toggle-reactions" onclick="toggleReactions(this)">Show Reactions</button>
+                <div class="reactions-container" style="display: none;">
+                    ${met.reactions.length > 0 
+                        ? `<strong>In reactions:</strong>
+                        <ul>
+                            ${met.reactions.map(r => `<li><a href="/?reaction_id=${r.id}">${r.name}</a></li>`).join('')}
+                        </ul>`
+                        : '<strong>Not used in any reactions</strong>'}
+                </div>
             </div>
-        </div>
-        `;
-        metaboliteDiv.innerHTML = `
-        <div class="content" data-metabolite-id="${met.id}">
-            <div class="header savedMetabolite-header">
-                <div class="left-section">
-                    <div class="share-selection">
-                        <input type="checkbox" class="share-checkbox" data-metabolite-id="${met.id}">
+            `;
+            metaboliteDiv.innerHTML = `
+            <div class="content" data-metabolite-id="${met.id}">
+                <div class="header savedMetabolite-header">
+                    <div class="left-section">
+                        <div class="share-selection">
+                            <input type="checkbox" class="share-checkbox" data-metabolite-id="${met.id}">
+                        </div>
+                        <span class="toggle-arrow">▶</span>
+                        <span class="abbr">${met.vmh_abbr || '<span style="color: #999;">no abbr</span>'}</span>
+                        <span class="divider"> | </span>
+                        <span class="name">${met.name}</span>
                     </div>
-                    <span class="toggle-arrow">▶</span>
-                    <span class="abbr">${met.vmh_abbr || '<span style="color: #999;">no abbr</span>'}</span>
-                    <span class="divider"> | </span>
-                    <span class="name">${met.name}</span>
+                    <div class="buttons">
+                        <button class="ui primary button download-btn" 
+                                data-mol-file="${btoa(met.mol_file)}" 
+                                data-filename="${met.name.replace(/ /g, '_')}.mol" 
+                                onclick="downloadMolFile(this)">
+                            Download
+                        </button>
+                        <button class="ui negative button delete-btn" data-metabolite-id="${met.id}" onclick="deleteMetabolite(${met.id})">
+                            Delete
+                        </button>
+                    </div>
                 </div>
-                <div class="buttons">
-                    <button class="ui primary button download-btn" 
-                            data-mol-file="${btoa(met.mol_file)}" 
-                            data-filename="${met.name.replace(/ /g, '_')}.mol" 
-                            onclick="downloadMolFile(this)">
-                        Download
-                    </button>
-                    <button class="ui negative button delete-btn" data-metabolite-id="${met.id}" onclick="deleteMetabolite(${met.id})">
-                        Delete
-                    </button>
-                </div>
-            </div>
-    
-            <div class="description metabolite-details" style="display: none;">
-                <div class="ui grid compact-info-grid">
-                    <!-- Left Column (Editable Info) -->
-                    <div class="eight wide column">
-                        <div class="ui form small-form">
-                            <div class="twofields">
-                                <div class="field">
-                                    <label>Abbreviation</label>
-                                    <div class="ui action input">
-                                        <input type="text" value="${met.vmh_abbr || ''}" 
-                                               class="abbr-input readonly-field" readonly data-metabolite-id="${met.id}">
-                                        <button class="ui button generate-abbr-btn" 
-                                                onclick="generateAbbreviation(this)" style="display: none;">
-                                            Generate
-                                        </button>
-                                        <button class="ui button edit-button" 
-                                                onclick="toggleEditField(this, 'abbr')">
-                                            Edit
-                                        </button>
+        
+                <div class="description metabolite-details" style="display: none;">
+                    <div class="ui grid compact-info-grid">
+                        <!-- Left Column (Editable Info) -->
+                        <div class="eight wide column">
+                            <div class="ui form small-form">
+                                <div class="twofields">
+                                    <div class="field">
+                                        <label>Abbreviation</label>
+                                        <div class="ui action input">
+                                            <input type="text" value="${met.vmh_abbr || ''}" 
+                                                class="abbr-input readonly-field" readonly data-metabolite-id="${met.id}">
+                                            <button class="ui button generate-abbr-btn" 
+                                                    onclick="generateAbbreviation(this)" style="display: none;">
+                                                Generate
+                                            </button>
+                                            <button class="ui button edit-button" 
+                                                    onclick="toggleEditField(this, 'abbr')">
+                                                Edit
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <label>Name</label>
+                                        <div class="ui action input">
+                                            <input type="text" value="${met.name}" 
+                                                class="name-input readonly-field" readonly data-metabolite-id="${met.id}">
+                                            <button class="ui button edit-button" 
+                                                    onclick="toggleEditField(this, 'name')">
+                                                Edit
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="field">
-                                    <label>Name</label>
-                                    <div class="ui action input">
-                                        <input type="text" value="${met.name}" 
-                                               class="name-input readonly-field" readonly data-metabolite-id="${met.id}">
-                                        <button class="ui button edit-button" 
-                                                onclick="toggleEditField(this, 'name')">
-                                            Edit
-                                        </button>
-                                    </div>
+                            </div>
+                            ${reactionsHtml}
+                            <div class="external-links-container">
+                                <button class="ui button toggle-links" onclick="toggleExternalLinks(this)">Show External Links</button>
+                                <div class="links-container" style="display: none;">
+                                    ${externalLinksHtml}
                                 </div>
                             </div>
                         </div>
-                        ${reactionsHtml}
-                        <div class="external-links-container">
-                            <button class="ui button toggle-links" onclick="toggleExternalLinks(this)">Show External Links</button>
-                            <div class="links-container" style="display: none;">
-                                ${externalLinksHtml}
+        
+                        <!-- Right Column (Molecular Info) -->
+                        <div class="eight wide column">
+                            <div class="ui list compact-info-list">
+                                <div class="item">
+                                    <strong>InChI Key:</strong> <span>${met.inchi_key || 'N/A'}</span>
+                                </div>
+                                <div class="item">
+                                    <strong>InChI:</strong> <span>${met.inchi || 'N/A'}</span>
+                                </div>
+                                <div class="item">
+                                    <strong>SMILES:</strong> <span>${met.smiles || 'N/A'}</span>
+                                </div>
+                                <div class="item">
+                                    <strong>Molecular Weight:</strong> <span>${met.mol_w || 'N/A'}</span>
+                                </div>
+                                <div class="item">
+                                    <strong>Formula:</strong> <span>${met.mol_formula || 'N/A'}</span>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-    
-                    <!-- Right Column (Molecular Info) -->
-                    <div class="eight wide column">
-                        <div class="ui list compact-info-list">
-                            <div class="item">
-                                <strong>InChI Key:</strong> <span>${met.inchi_key || 'N/A'}</span>
+        
+                            <div class="structure-controls">
+                                <button class="ui button toggle-3d" 
+                                        onclick="toggle3DView(this, '${btoa(met.mol_file)}')">
+                                    Show 3D Structure
+                                </button>
                             </div>
-                            <div class="item">
-                                <strong>InChI:</strong> <span>${met.inchi || 'N/A'}</span>
+                            <div class="structure-container" style="display: none; height: 400px; width: 100%; position: relative;">
                             </div>
-                            <div class="item">
-                                <strong>SMILES:</strong> <span>${met.smiles || 'N/A'}</span>
-                            </div>
-                            <div class="item">
-                                <strong>Molecular Weight:</strong> <span>${met.mol_w || 'N/A'}</span>
-                            </div>
-                            <div class="item">
-                                <strong>Formula:</strong> <span>${met.mol_formula || 'N/A'}</span>
-                            </div>
-                        </div>
-    
-                        <div class="structure-controls">
-                            <button class="ui button toggle-3d" 
-                                    onclick="toggle3DView(this, '${btoa(met.mol_file)}')">
-                                Show 3D Structure
-                            </button>
-                        </div>
-                        <div class="structure-container" style="display: none; height: 400px; width: 100%; position: relative;">
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    `;    
-        listContainer.appendChild(metaboliteDiv);
-        document.querySelectorAll('.share-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('click', function (e) {
-                e.stopPropagation(); // This stops the click from bubbling up
+        `;    
+            listContainer.appendChild(metaboliteDiv);
+            document.querySelectorAll('.share-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('click', function (e) {
+                    e.stopPropagation(); // This stops the click from bubbling up
+                });
             });
         });
-    });
 
-    // Toggle animation and details
-    document.querySelectorAll('.savedMetabolite-header').forEach(header => {
-        header.addEventListener('click', function(e) {
-            if(!e.target.closest('.delete-btn, .edit-button')) {
-                this.classList.toggle('active');
-                const details = this.parentNode.querySelector('.metabolite-details');
-                details.style.display = details.style.display === 'none' ? 'block' : 'none';
-            }
+        // Toggle animation and details
+        document.querySelectorAll('.savedMetabolite-header').forEach(header => {
+            header.addEventListener('click', function(e) {
+                if(!e.target.closest('.delete-btn, .edit-button')) {
+                    this.classList.toggle('active');
+                    const details = this.parentNode.querySelector('.metabolite-details');
+                    details.style.display = details.style.display === 'none' ? 'block' : 'none';
+                }
+            });
         });
-    });
+    }
+    catch (error) {
+        listContainer.innerHTML = '<p>Error loading metabolites.</p>';
+        console.error(error);
+    }
 }
 
 function toggleExternalLinks(button) {
