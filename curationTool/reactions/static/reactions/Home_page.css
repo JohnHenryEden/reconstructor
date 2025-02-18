@@ -906,7 +906,7 @@ footer {
     justify-content: flex-end;
     margin-top: 10px;
 }
-.external-links-container{
+.external-links-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -914,6 +914,10 @@ footer {
     margin-top: 10px;
     flex-wrap: wrap;
     flex-direction: row;
+}
+.reactions-toggle-container{
+    gap: 10px;
+    margin-top: 10px;
 }
 .twofields{
     display: flex;

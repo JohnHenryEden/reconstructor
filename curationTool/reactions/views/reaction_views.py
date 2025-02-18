@@ -357,7 +357,10 @@ def get_reaction(request, reaction_id):
             reaction.metabolite_inchi_keys = json.dumps(metabolite_inchi_keys)
             reaction.metabolite_mol_weights = json.dumps(metabolite_mol_weights)
             reaction.save()
-
+        for idx, metabolite_mol_file_string in enumerate(json.loads(reaction.metabolite_mol_file_strings)):
+            print(f"Metabolite {idx + 1}")
+            print(metabolite_mol_file_string)
+            
         reaction_data = {
             'Organs': reaction.Organs,
             'reaction_id': reaction.id,

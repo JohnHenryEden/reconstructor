@@ -188,7 +188,20 @@ async function loadSavedMetabolites() {
                 <button class="ui button edit-button" onclick="toggleEditField(this, '${key}')">Edit</button>
             </div>
         </div>
-    `).join('');
+        `).join('');
+        const reactionsHtml = `
+        <div class="reactions-toggle-container">
+            <button class="ui button toggle-reactions" onclick="toggleReactions(this)">Show Reactions</button>
+            <div class="reactions-container" style="display: none;">
+                ${met.reactions.length > 0 
+                    ? `<strong>In reactions:</strong>
+                    <ul>
+                        ${met.reactions.map(r => `<li><a href="/?reaction_id=${r.id}">${r.name}</a></li>`).join('')}
+                    </ul>`
+                    : '<strong>Not used in any reactions</strong>'}
+            </div>
+        </div>
+        `;
         metaboliteDiv.innerHTML = `
         <div class="content" data-metabolite-id="${met.id}">
             <div class="header savedMetabolite-header">
@@ -248,6 +261,7 @@ async function loadSavedMetabolites() {
                                 </div>
                             </div>
                         </div>
+                        ${reactionsHtml}
                         <div class="external-links-container">
                             <button class="ui button toggle-links" onclick="toggleExternalLinks(this)">Show External Links</button>
                             <div class="links-container" style="display: none;">
@@ -314,7 +328,11 @@ function toggleExternalLinks(button) {
     container.style.display = container.style.display === 'none' ? 'flex' : 'none';
     button.textContent = container.style.display === 'none' ? 'Show External Links' : 'Hide External Links';
 }
-
+function toggleReactions(button) {
+    const container = button.nextElementSibling;
+    container.style.display = container.style.display === 'none' ? 'block' : 'none';
+    button.textContent = container.style.display === 'none' ? 'Show Reactions' : 'Hide Reactions';
+}
 function downloadMolFile(buttonElement) {
     const molFileBase64 = buttonElement.getAttribute('data-mol-file');
     const filename = buttonElement.getAttribute('data-filename');

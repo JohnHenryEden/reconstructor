@@ -6,6 +6,7 @@ from reactions.utils.utils import capitalize_first_letter
 from reactions.utils.get_from_rhea import get_from_rhea
 from reactions.models import SavedMetabolite, User, Reaction
 import requests
+from collections import defaultdict
 from django.views.decorators.csrf import csrf_exempt
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
@@ -128,6 +129,25 @@ def get_saved_metabolites(request):
     saved_metabolites = SavedMetabolite.objects.filter(
         Q(owner=user) | Q(shared_with=user)
     ).distinct()
+    user_reactions = user.saved_reactions.all()
+    metabolite_reactions = defaultdict(list)
+    for reaction in user_reactions:
+        try:
+            subs = json.loads(reaction.substrates)
+            prods = json.loads(reaction.products)
+            subs_types = json.loads(reaction.substrates_types)
+            prods_types = json.loads(reaction.products_types)
+        except json.JSONDecodeError:
+            subs, prods = [], []
+        
+        reaction_info = {
+            'id': reaction.id,
+            'name': reaction.short_name or f'Reaction {reaction.id}'
+        }
+        # Check all substrate/product IDs (stored as strings)
+        for met_id_str, met_type in zip(subs + prods, subs_types + prods_types):
+            if met_type == 'Saved':
+                metabolite_reactions[met_id_str].append(reaction_info)
     metabolites_list = []
     for met in saved_metabolites:
         external_links = {
@@ -142,6 +162,7 @@ def get_saved_metabolites(request):
             'id': met.id,
             'name': met.name,
             'vmh_abbr': met.vmh_abbr or '',
+            'reactions': metabolite_reactions[str(met.id)],
             'inchi_key': met.inchi_key, 
             'inchi': met.inchi,
             'smiles': met.smiles,
@@ -236,7 +257,6 @@ def delete_metabolite(request, metabolite_id):
 
             confirm = request.GET.get('confirm') == 'true'
             if not confirm and affected_reactions:
-
                 reactions_list = [{'id': r.id, 'short_name': r.short_name} for r in affected_reactions]
                 return JsonResponse({
                     'status': 'needs_confirmation',

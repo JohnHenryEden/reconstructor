@@ -310,7 +310,10 @@ def any_to_mol(mols, types, request, side='substrates'):
                 save_path = os.path.join(MEDIA_ROOT, save_path)
             mol = Chem.MolFromMolFile(
                 save_path, sanitize=False, removeHs=False)
-            mol.UpdatePropertyCache(strict=False)
+            if not mol:
+                mol, error = None, f"Invalid MDL Mol file {original_filename}"
+            else:
+                mol.UpdatePropertyCache(strict=False)
             if request:
                 os.remove(save_path)
             error = None if mol else f"Invalid MDL Mol file {original_filename}"
