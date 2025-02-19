@@ -229,3 +229,14 @@ def get_mol_weights(mols, types):
         else:
             mol_weights.append(None)
     return mol_weights
+
+def parse_mol_formula(formula):
+    """
+    Parses a molecular formula string (e.g., "C6H12O6") and returns a dictionary with element counts.
+    """
+    pattern = r'([A-Z][a-z]?)(\d*)'
+    matches = re.findall(pattern, formula)
+    counts = {}
+    for elem, count in matches:
+        counts[elem] = counts.get(elem, 0) + (int(count) if count else 1)
+    return counts

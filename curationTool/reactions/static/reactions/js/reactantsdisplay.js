@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     displayreactioninfo(reactionData = null);
     attachEventListenersToSelects();
     toggleStructure();
-
+    updateAtomChargeCounters();
     const urlParams = new URLSearchParams(window.location.search);
     const reactionId = urlParams.get('reaction_id');
     const action = urlParams.get('action');

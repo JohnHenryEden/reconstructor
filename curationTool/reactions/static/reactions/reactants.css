@@ -711,3 +711,25 @@
     transition: background-color 0.3s ease; /* Smooth transition for hover effect */
 }
 
+.atom-charge-comparison {
+    margin: 10px auto;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 95%;
+    background-color: #f9f9f9;
+    font-size: 0.9em;
+}
+.atom-charge-comparison h4 {
+    margin: 0 0 10px 0;
+    text-align: center;
+}
+.atom-charge-comparison .counter-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 5px;
+}
+.atom-charge-comparison .counter-row span {
+    flex: 1;
+    text-align: center;
+}

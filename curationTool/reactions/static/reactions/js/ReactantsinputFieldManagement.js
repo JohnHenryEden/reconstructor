@@ -156,6 +156,7 @@ document.getElementById('applyAllProdsType').addEventListener('click', function(
 function removeField(button) {
     let inputsGroup = button.closest('.inputs-group');
     inputsGroup.remove();
+    updateAtomChargeCounters();
 }
 
 function toggleRotation(event) {
@@ -760,11 +761,16 @@ function handleDoneButtonClick(event) {
             }
             updateNameFields(data, main_input, typeField, button);
             // below code will add a hidden text div that stores the status of the metabolite
+            main_input.parentNode.dataset.atomCounts = JSON.stringify(data.atom_counts);
+            main_input.parentNode.dataset.charge = data.charge;
+        
             let hidden_status = document.createElement('input');
             hidden_status.style.display = 'none';
             hidden_status.value = data.found;
             hidden_status.className = 'valid-status';
             main_input.parentNode.appendChild(hidden_status);
+
+            updateAtomChargeCounters();
         }
     });    
 }
@@ -873,4 +879,76 @@ function updateNameFields(data = {}, main_input = null, typeField = null, button
         }
     }
 
+}
+// Format an atom counts object into a string (e.g., "C: 6, H: 12, O: 6")
+function formatAtomCounts(counts) {
+    let parts = [];
+    for (let elem in counts) {
+        if (counts.hasOwnProperty(elem)) {
+            parts.push(`${elem}: ${counts[elem]}`);
+        }
+    }
+    return parts.join(', ');
+}
+
+// Aggregate and update the counters for substrates and products
+function updateAtomChargeCounters() {
+    // Aggregate substrates
+    let substratesDiv = document.getElementById("substratesDiv");
+    let substrateGroups = substratesDiv.querySelectorAll(".inputs-group");
+    let totalAtomsSubs = {};
+    let totalChargeSubs = 0;
+    substrateGroups.forEach(function(group) {
+        if (group.dataset.atomCounts) {
+            let counts = JSON.parse(group.dataset.atomCounts);
+            for (let elem in counts) {
+                if (counts.hasOwnProperty(elem)) {
+                    totalAtomsSubs[elem] = (totalAtomsSubs[elem] || 0) + counts[elem];
+                }
+            }
+            totalChargeSubs += parseFloat(group.dataset.charge) || 0;
+        }
+    });
+    
+    // Aggregate products
+    let productsDiv = document.getElementById("productsDiv");
+    let productGroups = productsDiv.querySelectorAll(".inputs-group");
+    let totalAtomsProds = {};
+    let totalChargeProds = 0;
+    productGroups.forEach(function(group) {
+        if (group.dataset.atomCounts) {
+            let counts = JSON.parse(group.dataset.atomCounts);
+            for (let elem in counts) {
+                if (counts.hasOwnProperty(elem)) {
+                    totalAtomsProds[elem] = (totalAtomsProds[elem] || 0) + counts[elem];
+                }
+            }
+            totalChargeProds += parseFloat(group.dataset.charge) || 0;
+        }
+    });
+    
+    // Create a union of atoms from both substrates and products
+    let atoms = new Set([...Object.keys(totalAtomsSubs), ...Object.keys(totalAtomsProds)]);
+    let html = '<h4>Mass & Charge Comparison</h4>';
+    html += '<div class="counter-row"><span>Atom</span><span>Substrates</span><span>Products</span></div>';
+    
+    atoms.forEach(function(atom) {
+        let subsCount = totalAtomsSubs[atom] || 0;
+        let prodCount = totalAtomsProds[atom] || 0;
+        // Color green if identical, red otherwise
+        let color = (subsCount === prodCount) ? 'green' : 'red';
+        html += `<div class="counter-row">
+                    <span>${atom}</span>
+                    <span style="color:${color}">${subsCount}</span>
+                    <span style="color:${color}">${prodCount}</span>
+                 </div>`;
+    });
+    // Add charge row
+    let chargeColor = (totalChargeSubs === totalChargeProds) ? 'green' : 'red';
+    html += `<div class="counter-row">
+                <span>Charge</span>
+                <span style="color:${chargeColor}">${totalChargeSubs}</span>
+                <span style="color:${chargeColor}">${totalChargeProds}</span>
+             </div>`;
+    document.getElementById("atomChargeComparison").innerHTML = html;
 }

@@ -2,7 +2,7 @@ import json
 import pandas as pd
 from reactions.utils.search_vmh import search_vmh
 from reactions.utils.to_mol import any_to_mol
-from reactions.utils.utils import capitalize_first_letter
+from reactions.utils.utils import capitalize_first_letter, parse_mol_formula
 from reactions.utils.get_from_rhea import get_from_rhea
 from reactions.models import SavedMetabolite, User, Reaction
 import requests
@@ -12,6 +12,8 @@ from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.db.models import Q
 import rdkit.Chem as Chem
+from rdkit.Chem.rdMolDescriptors import CalcMolFormula
+
 
 def verify_metabolite(request):
     """
@@ -41,11 +43,26 @@ def verify_metabolite(request):
                             'message': f'Metabolite {main_input} does not have SMILES or inchi String on VMH'},
                         status=404)
                 else:
-                    return JsonResponse({'found': True,
-                                         'abbr': data['results'][0]['abbreviation'],
-                                         'name': data['results'][0]['fullName'],
-                                         'miriam': data['results'][0]['miriam'],
-                                         'input_type': input_type})
+                    if smile:
+                        mol_obj = Chem.MolFromSmiles(smile)
+                    elif inchi_string:
+                        mol_obj = Chem.MolFromInchi(inchi_string)
+                    if mol_obj:
+                        formula = CalcMolFormula(mol_obj)
+                        atom_counts = parse_mol_formula(formula)
+                        charge = sum(atom.GetFormalCharge() for atom in mol_obj.GetAtoms())
+                    else:
+                        atom_counts = {}
+                        charge = None
+                    return JsonResponse({
+                        'found': True,
+                        'abbr': data['results'][0]['abbreviation'],
+                        'name': data['results'][0]['fullName'],
+                        'miriam': data['results'][0]['miriam'],
+                        'input_type': input_type,
+                        'atom_counts': atom_counts,
+                        'charge': charge
+                    })
             else:
                 return JsonResponse(
                     {'error': True, 'message': f'Metabolite `{main_input}` not found in VMH'}, status=404)
@@ -71,14 +88,27 @@ def verify_metabolite(request):
             )
         except SavedMetabolite.DoesNotExist:
             return JsonResponse({'error': True, 'message': f'Saved metabolite with id `{main_input}` not found'}, status=404)
+        if saved_met.mol_formula:
+            atom_counts = parse_mol_formula(saved_met.mol_formula)
+        else:
+            atom_counts = {}
+        try:
+            mol_obj = Chem.MolFromMolBlock(saved_met.mol_file)
+            if mol_obj:
+                charge = sum(atom.GetFormalCharge() for atom in mol_obj.GetAtoms())
+            else:
+                charge = None
+        except Exception:
+            charge = None
 
         return JsonResponse({
             'found': False,
             'abbr': saved_met.vmh_abbr,
             'name': saved_met.name,
-            'input_type': input_type
+            'input_type': input_type,
+            'atom_counts': atom_counts,
+            'charge': charge
         })
-        
     else:
         mols, errors, names = any_to_mol(
             [main_input], [input_type], request, side=None)
@@ -107,7 +137,9 @@ def verify_metabolite(request):
             if saved_met_obj.exists():
                 saved_exists = True
                 name_in_db = saved_met_obj.first().name
-
+        formula = CalcMolFormula(mol)
+        atom_counts = parse_mol_formula(formula)
+        charge = sum(atom.GetFormalCharge() for atom in mol.GetAtoms())
         return JsonResponse({
             'found': found,
             'abbr': abbr,
@@ -115,8 +147,11 @@ def verify_metabolite(request):
             'miriam': miriam,
             'input_type': input_type,
             'saved_exists': saved_exists,
-            'name_in_db': name_in_db
+            'name_in_db': name_in_db,
+            'atom_counts': atom_counts,
+            'charge': charge
         })
+
 
 def get_saved_metabolites(request):
     user_id = request.GET.get('user_id')
