@@ -378,6 +378,20 @@
 .done-field-btn-all {
     margin-left: 10px; /* Slightly reduced spacing */
 }
+.done-field-btn-all:disabled,
+.done-field-btn:disabled {
+    background-color: #ccc; /* Greyed out background */
+    border-color: #aaa;     /* Grey border */
+    color: #666;            /* Grey text */
+    cursor: not-allowed;    /* Indicate non-clickable */
+}
+
+/* Ensure disabled buttons don't change on hover */
+.done-field-btn-all:disabled:hover,
+.done-field-btn:disabled:hover {
+    background-color: #ccc;
+    border-color: #aaa;
+}
 
 
 #reactionFormContainer{

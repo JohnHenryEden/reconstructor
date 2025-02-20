@@ -724,6 +724,9 @@ function handleDoneButtonClick(event) {
         alert(`Please enter a compartment for ${fullname}`);
         return;
     }
+    button.disabled = true;
+    const originalButtonText = button.textContent;
+    button.textContent = 'Loading...'
     let data = new FormData();
     data.append('metabolite', main_input.value);
     data.append('type', typeField.value);
@@ -759,6 +762,9 @@ function handleDoneButtonClick(event) {
             if (data.saved_exists) {
                 alert(`IMPORTANT: A saved metabolite named "${data.name_in_db}" already exists. \nIf you intend to use it, please select it as a 'My Metabolite' metabolite to ensure your reaction is set up correctly.`);
             }
+            if (data.noStructure){
+                alert(`No structure found for ${data.name}, only the formula (${data.formula}) will be used. \n \nThis means that some operations which require a structure will not be skipped.`);
+            }
             updateNameFields(data, main_input, typeField, button);
             // below code will add a hidden text div that stores the status of the metabolite
             main_input.parentNode.dataset.atomCounts = JSON.stringify(data.atom_counts);
@@ -772,7 +778,11 @@ function handleDoneButtonClick(event) {
 
             updateAtomChargeCounters();
         }
-    });    
+    })   
+    .finally(() => {
+        button.disabled = false;
+        button.textContent = originalButtonText;
+    });
 }
     
 

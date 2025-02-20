@@ -1,28 +1,80 @@
-from django.http import JsonResponse
+"""
+This module contains utility views for handling session data, 
+parsing reaction formulas, and fetching external data such as 
+PubMed and DOI information.
+"""
+
 import json
-from django.views.decorators.csrf import csrf_exempt
-from reactions.models import Reaction
 import re
 import requests
-from reactions.utils.utils import parse_xml
+
+from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+
+from reactions.models import Reaction
+from reactions.utils.utils import parse_xml
 
 
 def check_session_data(request):
+    """
+    Delete a specific gene information entry from the session.
+
+    Expects:
+        JSON body with 'info_to_delete' key.
+
+    Returns:
+        JsonResponse: Success message if deleted, or an error message if failed.
+    """
     # Check if 'gene_info' is in session
     gene_info = request.session.get('gene_info', None)
 
     if gene_info:
         return JsonResponse({'status': 'success', 'gene_info': gene_info})
+
+    return JsonResponse(
+        {'status': 'error', 'message': 'No gene info in session.'})
+
+@csrf_exempt
+def clear_session(request):
+    """
+    Clear all session data.
+
+    Returns:
+        JsonResponse: Success message if cleared, or an error message if failed.
+    """
+
+    if request.method == 'POST':
+        try:
+            # Clear the entire session
+            request.session.flush()  # This will clear all session data
+
+            return JsonResponse({'status': 'success',
+                                 'message': 'Session cleared successfully.'})
+        except Exception as e:
+            return JsonResponse(
+                {'status': 'error', 'message': str(e)}, status=400)
     else:
         return JsonResponse(
-            {'status': 'error', 'message': 'No gene info in session.'})
-
-
-# Use csrf_exempt if you don't want to deal with CSRF tokens in
-# development. However, be cautious with this in production.
+            {'status': 'error', 'message': 'Invalid request method.'}, status=405)
 @csrf_exempt
 def delete_gene_info_from_session(request):
+    """
+    Delete a specific gene information entry from the session.
+
+    Expects:
+        JSON body with the key 'info_to_delete', specifying the gene info to remove.
+
+    Process:
+        - Retrieves the existing 'gene_info' list from the session.
+        - Filters out the specified entry.
+        - Updates the session with the modified list.
+
+    Returns:
+        JsonResponse:
+            - Success message if the gene info is deleted.
+            - Error message if the request method is invalid or an exception occurs.
+    """
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -48,28 +100,17 @@ def delete_gene_info_from_session(request):
         return JsonResponse(
             {'status': 'error', 'message': 'Invalid request method.'}, status=405)
 
-
-# Use csrf_exempt if you don't want to deal with CSRF tokens in
-# development. However, be cautious with this in production.
-@csrf_exempt
-def clear_session(request):
-    if request.method == 'POST':
-        try:
-            # Clear the entire session
-            request.session.flush()  # This will clear all session data
-
-            return JsonResponse({'status': 'success',
-                                 'message': 'Session cleared successfully.'})
-        except Exception as e:
-            return JsonResponse(
-                {'status': 'error', 'message': str(e)}, status=400)
-    else:
-        return JsonResponse(
-            {'status': 'error', 'message': 'Invalid request method.'}, status=405)
-
-
 @csrf_exempt
 def parse_formula_with_compartments(request):
+    """
+    Parse and format chemical reaction formulas with specified compartments.
+
+    Expects:
+        JSON body with 'formulas', 'subs_comps', and 'prods_comps'.
+
+    Returns:
+        JsonResponse: Formatted reaction formulas with compartment details.
+    """
     if request.method == 'POST':
         try:
             body = json.loads(request.body)
@@ -123,12 +164,24 @@ def parse_formula_with_compartments(request):
             # lengths of subs_list and prods_list
             if len(subs_list) != len(subs_comps):
                 return JsonResponse(
-                    {'error': 'Number of substrate compartments does not match number of substrates'}, status=400)
-
+                    {
+                        'error': (
+                            "Number of substrate compartments does not "
+                            "match number of substrates."
+                        )
+                    },
+                    status=400
+                )
             if len(prods_list) != len(prods_comps):
                 return JsonResponse(
-                    {'error': 'Number of product compartments does not match number of products'}, status=400)
-
+                    {
+                        'error': (
+                            "Number of product compartments does not "
+                            "match number of products."
+                        )
+                    },
+                    status=400
+                )
             subs_detailed = []
             for j, comp in enumerate(subs_list):
                 quantity, name = extract_components(comp)
@@ -155,6 +208,15 @@ def parse_formula_with_compartments(request):
 
 @csrf_exempt  # Use csrf_exempt if CSRF token isn't being managed
 def save_formula(request):
+    """
+    Save a given reaction formula to the database.
+
+    Expects:
+        JSON body with 'formula' and 'reaction_id'.
+
+    Returns:
+        JsonResponse: Success message if saved, or an error if reaction not found.
+    """
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -169,8 +231,8 @@ def save_formula(request):
                 reaction = Reaction.objects.get(id=reaction_id)
             except Reaction.DoesNotExist:
                 return JsonResponse(
-                    {'status': 'failed', 'error': 'Reaction not found'}, status=404)
-
+                    {'status': 'failed', 'error': 'Reaction not found'}, status=404
+                )
             # Update the formulas field with the provided formula string with
             # quotes
             reaction.rxn_formula = quoted_formula
@@ -185,6 +247,16 @@ def save_formula(request):
 
 
 def get_pubmed_info(request, pmid):
+    """
+    Fetch PubMed article details using a given PubMed ID (PMID).
+
+    Parameters:
+        pmid (str): The PubMed ID of the article.
+
+    Returns:
+        JsonResponse: Contains the article title, authors, and abstract, 
+                      or an error message if unsuccessful.
+    """
     # Base URL for PubMed API
     base_url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi'
     params = {
@@ -192,7 +264,7 @@ def get_pubmed_info(request, pmid):
         'id': pmid,
         'retmode': 'xml'
     }
-    response = requests.get(base_url, params=params)
+    response = requests.get(base_url, params=params,timeout=10)
 
     if response.status_code == 200:
         # Parsing XML response is necessary here to extract needed information
@@ -210,17 +282,27 @@ def get_pubmed_info(request, pmid):
             'title': pubmed_info['title'],
             'abstract': pubmed_info['abstract']
         })
-    else:
-        return JsonResponse({'status': 'error',
-                             'message': f"PubMed API returned error {response.status_code}"},
-                            status=500)
+
+    return JsonResponse({'status': 'error',
+                            'message': f"PubMed API returned error {response.status_code}"},
+                        status=500)
 
 
 def get_doi_info(request, doi):
+    """
+    Retrieve metadata of a publication using a DOI from CrossRef API.
+
+    Parameters:
+        doi (str): The DOI of the publication.
+
+    Returns:
+        JsonResponse: Contains the title, authors, and abstract, 
+                      or an error message if unsuccessful.
+    """
     doi = doi.replace('DOI:', '')
     base_url = f'https://api.crossref.org/works/{doi}'
     try:
-        response = requests.get(base_url)
+        response = requests.get(base_url, timeout=10)
         if response.status_code == 200:
             data = response.json()['message']
 
@@ -236,14 +318,20 @@ def get_doi_info(request, doi):
                 'title': title,
                 'abstract': abstract
             })
-        else:
-            return JsonResponse({'status': 'error',
-                                 'message': 'CrossRef API returned an error'},
-                                status=response.status_code)
+
+        return JsonResponse({'status': 'error',
+                                'message': 'CrossRef API returned an error'},
+                            status=response.status_code)
     except Exception as e:
         return JsonResponse(
-            {'status': 'error', 'message': 'Failed to fetch DOI data'}, status=500)
+            {'status': 'error', 'message': f'Failed to fetch DOI data - {str(e)}'}, status=500)
 
 
 def chemdoodle_sketcher(request):
+    """
+    Render the ChemDoodle Sketcher page.
+
+    Returns:
+        HttpResponse: Renders the 'chemdoodle_sketcher.html' template.
+    """
     return render(request, 'reactions/chemdoodle_sketcher.html')

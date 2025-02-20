@@ -149,8 +149,9 @@ def swisslipids_to_mol(id):
         smiles = structures.get('smiles', '')
         inchi = structures.get('inchi', '')
         name = data.get('entity_name', '')
+        mol_str = structures.get('structure', '')
         inchi = None if inchi == 'InChI=none' else inchi
-        if not smiles and not inchi:
+        if not smiles and not inchi and not mol_str:
             return None, f"Metabolite {id} does not have SMILES or Inchi on SwissLipids", ''
         elif inchi:
             mol = Chem.MolFromInchi(inchi, sanitize=False, removeHs=False)
@@ -171,6 +172,12 @@ def swisslipids_to_mol(id):
             except BaseException:
                 mol = Chem.MolFromSmiles(smiles)
             mol.UpdatePropertyCache(strict=False)
+        elif mol_str:
+            mol = Chem.MolFromMolBlock(mol_str)
+            mol.UpdatePropertyCache(strict=False)
+            smiles = Chem.MolToSmiles(mol)
+            smiles = smiles_with_explicit_hydrogens(smiles)
+            mol = Chem.MolFromSmiles(smiles)
     return mol, None, name
 
 

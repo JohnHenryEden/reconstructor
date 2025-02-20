@@ -7,7 +7,6 @@ body {
 
 }
 
-
 .top-menu {
     display: flex;
     justify-content: space-between;
@@ -45,8 +44,6 @@ body {
 .user-info.item {
     margin-right: 58px; /* Keep the user info button on the right */
 }
-
-
 
 
 .ui.secondary.vertical.pointing.menu {

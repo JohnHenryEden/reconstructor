@@ -134,8 +134,17 @@ def get_reaction_info(rxn_file_path, direction):
         rxn_file_path)
     molc_formula, symb_to_name = get_molecular_formula(
         rxn_file_path, direction)
-    return balanced_count, (subs_atoms, prods_atoms), balanced_charge, (
-        subs_charge, prods_charge), molc_formula, symb_to_name
+    reaction_info = {
+        'balanced_count': balanced_count,
+        'subs_atoms': subs_atoms,
+        'prods_atoms': prods_atoms,
+        'balanced_charge': balanced_charge,
+        'subs_charge': subs_charge,
+        'prods_charge': prods_charge,
+        'molc_formula': molc_formula,
+        'symb_to_name': symb_to_name
+    }
+    return reaction_info
 
 
 def construct_vmh_formula(reaction, subs_abbr, prods_abbr):

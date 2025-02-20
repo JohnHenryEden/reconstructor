@@ -1,9 +1,41 @@
-from reactions.models import User, Reaction, Flag
-from django.http import JsonResponse
-import json
+"""
+User authentication and reaction management views.
 
+This module provides API endpoints for user-related actions, including:
+    - User authentication (login and registration)
+    - Session management
+    - Reaction saving and flagging
+
+Functions:
+    - get_user: Authenticates users and starts a session.
+    - register_user: Handles new user registration.
+    - validate_user_ID: Checks if a user ID is valid.
+    - set_session_user: Stores a user ID in the session.
+    - save_user_reaction: Saves a user's reaction with optional metadata.
+"""
+
+import json
+from django.http import JsonResponse
+from reactions.models import User, Reaction, Flag
 
 def get_user(request):
+    """
+    Authenticate a user and initiate a session.
+
+    Process:
+        - Retrieves username and password from request.
+        - Validates user credentials.
+        - If valid, stores user ID in session.
+
+    Parameters:
+        request (HttpRequest): The HTTP request containing POST data with 
+                               'username' and 'password'.
+
+    Returns:
+        JsonResponse:
+            - Success: Returns user details and session ID.
+            - Error: If credentials are incorrect or user does not exist.
+    """
     username = request.POST.get('username', '')
     password = request.POST.get('password', '')
     try:
@@ -13,15 +45,33 @@ def get_user(request):
             request.session['userID'] = user.pk
             return JsonResponse(
                 {'status': 'success', 'userName': user.name, 'userID': user.pk})
-        else:
-            return JsonResponse(
-                {'status': 'error', 'message': 'Invalid password'})
+
+        return JsonResponse(
+            {'status': 'error', 'message': 'Invalid password'})
     except User.DoesNotExist:
         return JsonResponse(
             {'status': 'error', 'message': 'User does not exist'})
 
 
 def register_user(request):
+    """
+    Register a new user.
+
+    Process:
+        - Retrieves username, password, email, ORCID ID, and full name from request.
+        - Ensures required fields are provided and username is unique.
+        - Creates and saves a new user in the database.
+        - Stores user ID in session.
+
+    Parameters:
+        request (HttpRequest): The HTTP request containing POST data with 
+                               'username', 'password', 'email', 'orchid_id', and 'full_name'.
+
+    Returns:
+        JsonResponse:
+            - Success: Returns user details and session ID.
+            - Error: If username already exists or required fields are missing.
+    """
     username = request.POST.get('username', '')
     password = request.POST.get('password', '')
     email = request.POST.get('email', '')
@@ -58,7 +108,21 @@ def register_user(request):
 
 
 def validate_user_ID(user_id):
-    """Validate the user ID."""
+    """
+    Validate if a user ID exists in the database.
+
+    Process:
+        - Attempts to retrieve a user by primary key.
+        - Returns the user object if found.
+
+    Parameters:
+        user_id (int): The primary key of the user.
+
+    Returns:
+        User or None:
+            - User: If the ID is valid.
+            - None: If no matching user exists.
+    """
     try:
         user = User.objects.get(pk=user_id)
         return user
@@ -67,10 +131,26 @@ def validate_user_ID(user_id):
 
 
 def set_session_user(request):
+    """
+    Store a user ID in the session.
+
+    Process:
+        - Extracts 'userID' from request body.
+        - Saves it in the session.
+        - Verifies session storage and user validity.
+
+    Parameters:
+        request (HttpRequest): The HTTP request containing JSON body with 'userID'.
+
+    Returns:
+        JsonResponse:
+            - Success: If user ID is successfully set in session.
+            - Error: If validation fails.
+    """
     req_body = json.loads(request.body)
-    userID = int(req_body.get('userID'))
-    request.session['userID'] = userID
-    if request.session.get('userID') == userID and validate_user_ID(userID):
+    user_id = int(req_body.get('userID'))
+    request.session['userID'] = user_id
+    if request.session.get('userID') == user_id and validate_user_ID(user_id):
         return JsonResponse(
             {'status': 'success', 'message': 'User set in session'})
     else:
@@ -79,6 +159,25 @@ def set_session_user(request):
 
 
 def save_user_reaction(request):
+    """
+    Save a user's reaction with optional metadata.
+
+    Process:
+        - Retrieves reaction ID, user ID, and additional details from request.
+        - Validates the reaction and user.
+        - Updates reaction metadata (short name, description, flags, confidence score).
+        - Associates the reaction with the user.
+
+    Parameters:
+        request (HttpRequest): The HTTP request containing POST data with 
+                               'reaction_id', 'userID', 'short_name', 
+                               'description', 'flag_name', 'flag_color', and 'confidence_score'.
+
+    Returns:
+        JsonResponse:
+            - Success: If the reaction is saved successfully.
+            - Error: If user or reaction is invalid or if request is incorrect.
+    """
     if request.method == 'POST':
         reaction_id = request.POST.get('reaction_id')
         userID = request.POST.get('userID')
@@ -103,7 +202,7 @@ def save_user_reaction(request):
             if confidence_score not in ["1", "2", "3", "4", None]:
                 return JsonResponse({'status': 'error', 'message': 'Invalid confidence score'})
             if flag_name.strip() not in ['None', 'Choose a flag'] and flag_color != 'null':
-                flag, created = Flag.objects.get_or_create(name_flag=flag_name, color=flag_color)
+                flag, _ = Flag.objects.get_or_create(name_flag=flag_name, color=flag_color)
                 reaction.flags.add(flag)
             reaction.confidence_score = confidence_score
             reaction.save()

@@ -1,11 +1,14 @@
 import json
+import requests
 import random
 import os
+
 from rdkit import Chem
 from rdkit.Chem.rdMolDescriptors import CalcMolFormula
+from django.http import JsonResponse
+
 from reactions.utils.to_mol import any_to_mol
 from reactions.utils.search_vmh import check_reaction_vmh
-import requests
 # Function to gather additional reaction details
 
 
@@ -378,3 +381,124 @@ def check_met_names_abbrs_vmh(
             prods_abbr_vmh,
             prods_found)
     return subs_names_vmh, subs_abbr_vmh, prods_names_vmh, prods_abbr_vmh
+
+def validate_reaction_fields(reactions):
+    """
+    Validate that each reaction has non-empty short_name, abbreviation, and confidence_score.
+    Also check for duplicates in the list.
+    """
+    missing_names = [reaction['short_name'] == '' for reaction in reactions]
+    if True in missing_names:
+        return JsonResponse({'status': 'error',
+                             'message': 'Please enter a description for reaction'})
+    
+    missing_abbrs = [reaction['abbreviation'] == '' for reaction in reactions]
+    if True in missing_abbrs:
+        return JsonResponse({'status': 'error',
+                             'message': 'Please enter an abbreviation'})
+    
+    missing_conf_scores = [reaction['confidence_score'] == '" "' for reaction in reactions]
+    if True in missing_conf_scores:
+        return JsonResponse({'status': 'error',
+                             'message': 'Please enter a confidence score for all reactions'})
+    
+    names_list = [reaction['short_name'] for reaction in reactions]
+    for name in names_list:
+        if names_list.count(name) > 1:
+            return JsonResponse({'status': 'error',
+                                 'message': f'Reaction with name `{name}` is repeated in the list.'})
+    
+    abbr_list = [reaction['abbreviation'] for reaction in reactions]
+    for abbr in abbr_list:
+        if abbr_list.count(abbr) > 1:
+            return JsonResponse({'status': 'error',
+                                 'message': f'Reaction with abbreviation `{abbr}` is repeated in the list.'})
+    return None
+
+
+def validate_reaction_existence(reactions):
+    """
+    Validate that the reaction names and abbreviations do not already exist in VMH.
+    """
+    name_in_vmh, abbr_in_vmh = check_names_abbrs_vmh(
+        [(reaction['short_name'], reaction['abbreviation']) for reaction in reactions]
+    )
+    if True in list(name_in_vmh.values()):
+        name_in_vmh_reactions = [
+            reaction for reaction, in_vmh in zip(reactions, name_in_vmh.values()) if in_vmh
+        ]
+        reaction_names = ", ".join([reaction["short_name"] for reaction in name_in_vmh_reactions])
+        return JsonResponse({'status': 'error',
+                             'message': f'The following reaction descriptions are already in VMH: {reaction_names}'})
+    
+    if True in list(abbr_in_vmh.values()):
+        abbr_in_vmh_reactions = [
+            reaction for reaction, in_vmh in zip(reactions, abbr_in_vmh.values()) if in_vmh
+        ]
+        reaction_abbrs = ", ".join([reaction["abbreviation"] for reaction in abbr_in_vmh_reactions])
+        return JsonResponse({'status': 'error',
+                             'message': f'The following reaction abbreviations are already in VMH: {reaction_abbrs}'})
+    return None
+
+
+def validate_metabolite_existence(reactions_new_subsInfo, reactions_new_prodsInfo, reactions_subs_found, reactions_prods_found):
+    """
+    Validate that substrate and product names and abbreviations do not already exist in VMH.
+    """
+    subs_names_vmh, subs_abbr_vmh, prods_names_vmh, prods_abbr_vmh = check_met_names_abbrs_vmh(
+        reactions_new_subsInfo, reactions_new_prodsInfo, reactions_subs_found, reactions_prods_found
+    )
+    if True in list(subs_names_vmh.values()):
+        subs_names_in_vmh = [sub for sub in subs_names_vmh.keys() if subs_names_vmh[sub]]
+        return JsonResponse({'status': 'error',
+                             'message': f'The following substrates have metabolite names that are already in VMH: {", ".join(subs_names_in_vmh)}'})
+    
+    if True in list(subs_abbr_vmh.values()):
+        subs_abbrs_in_vmh = [sub for sub in subs_abbr_vmh.keys() if subs_abbr_vmh[sub]]
+        return JsonResponse({'status': 'error',
+                             'message': f'The following substrates have metabolite abbreviations that are already in VMH: {", ".join(subs_abbrs_in_vmh)}'})
+    
+    if True in list(prods_names_vmh.values()):
+        prods_names_in_vmh = [prod for prod in prods_names_vmh.keys() if prods_names_vmh[prod]]
+        return JsonResponse({'status': 'error',
+                             'message': f'The following products have metabolite names that are already in VMH: {", ".join(prods_names_in_vmh)}'})
+    
+    if True in list(prods_abbr_vmh.values()):
+        prods_abbrs_in_vmh = [prod for prod in prods_abbr_vmh.keys() if prods_abbr_vmh[prod]]
+        return JsonResponse({'status': 'error',
+                             'message': f'The following products have metabolite abbreviations that are already in VMH: {", ".join(prods_abbrs_in_vmh)}'})
+    return None
+
+
+def validate_reaction_objects(reaction_objs, not_enough_info, no_comments, not_balanced):
+    """
+    Validate that each updated reaction object has at least one reference/external link,
+    at least one comment, and is balanced.
+    """
+    if True in not_enough_info:
+        not_enough_info_reactions = [
+            reaction for reaction, not_enough in zip(reaction_objs, not_enough_info) if not_enough
+        ]
+        return JsonResponse({
+            'status': 'error',
+            'message': f'The following reactions do not have at least one reference or external link: {", ".join([reaction.short_name for reaction in not_enough_info_reactions])}'
+        })
+    
+    if True in no_comments:
+        no_comments_reactions = [
+            reaction for reaction, no_comment in zip(reaction_objs, no_comments) if no_comment
+        ]
+        return JsonResponse({
+            'status': 'error',
+            'message': f'The following reactions do not have at least one comment: {", ".join([reaction.short_name for reaction in no_comments_reactions])}'
+        })
+    
+    if True in not_balanced:
+        not_balanced_reactions = [
+            reaction for reaction, not_bal in zip(reaction_objs, not_balanced) if not_bal
+        ]
+        return JsonResponse({
+            'status': 'error',
+            'message': f'The following reactions are not balanced: {", ".join([reaction.short_name for reaction in not_balanced_reactions])}'
+        })
+    return None

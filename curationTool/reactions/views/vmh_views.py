@@ -1,37 +1,85 @@
+"""
+This module provides Django views for handling the addition of reactions 
+and metabolites to the Virtual Metabolic Human (VMH) database.
 
+Functionalities:
+- Retrieving metabolite abbreviations.
+- Fetching and updating subsystems.
+- Preparing reactions for submission to VMH.
+- Validating and generating metabolite and reaction details.
+- Sending reaction and metabolite data to VMH via MATLAB.
+
+Dependencies:
+- Django
+- JSON handling
+- Requests for external API calls
+- MATLAB integration for reaction/metabolite processing
+
+"""
 import json
-from reactions.models import User, Reaction, MetabolitesAddedVMH, ReactionsAddedVMH, Subsystem, SavedMetabolite
+import os
+import requests
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+from reactions.models import (
+    User,
+    Reaction,
+    MetabolitesAddedVMH,
+    ReactionsAddedVMH,
+    Subsystem,
+    SavedMetabolite
+)
 from reactions.reaction_info import construct_vmh_formula
 from reactions.utils.search_vmh import search_metabolites_vmh, is_name_in_vmh
 from reactions.utils.to_smiles import any_to_smiles
 from reactions.utils.utils import capitalize_first_letter
 from reactions.utils.gen_vmh_abbrs import gen_metabolite_abbr
-from reactions.utils.add_to_vmh_utils import check_met_names_abbrs_vmh, check_names_abbrs_vmh, gather_reaction_details, rxn_prepare_json_paths_and_variables, met_prepare_json_paths_and_variables, add_reaction_matlab, add_metabolites_matlab, smiles_to_inchikeys, smiles_to_charged_formula, get_nonfound_metabolites
+from reactions.utils.search_vmh import get_from_vmh
+from reactions.utils.add_to_vmh_utils import (
+    validate_metabolite_existence,
+    validate_reaction_existence,
+    validate_reaction_fields,
+    validate_reaction_objects,
+    check_reaction_vmh,
+    gather_reaction_details,
+    rxn_prepare_json_paths_and_variables,
+    met_prepare_json_paths_and_variables,
+    add_reaction_matlab,
+    add_metabolites_matlab,
+    smiles_to_inchikeys,
+    smiles_to_charged_formula,
+    get_nonfound_metabolites
+)
 from reactions.utils.MatlabSessionManager import MatlabSessionManager
-from reactions.utils.search_vmh import check_reaction_vmh, get_from_vmh
 from reactions.utils.utils import get_external_ids, get_mol_weights
-import requests
-import os
-from django.http import JsonResponse
-from django.core.exceptions import ObjectDoesNotExist
-from django.views.decorators.csrf import csrf_exempt
-
 
 def get_metabolite_abbrs(reaction_objs, attr_key, attr_type_key, attr_name_key):
     """
-    Retrieves abbreviations for metabolites in a reaction. 
-    If the metabolite type is 'Saved', it attempts to retrieve the abbreviation from the SavedMetabolite model. 
-    If the abbreviation doesn't exist, it generates one.
+    Retrieve abbreviations for metabolites in a reaction.
 
-    Args:
-        reaction_objs (list): List of Reaction objects.
-        attr_key (str): Attribute name for the metabolite list (e.g., 'substrates' or 'products').
-        attr_type_key (str): Attribute name for the metabolite type list (e.g., 'substrates_types' or 'products_types').
-        attr_name_key (str): Attribute name for the metabolite name list (e.g., 'substrates_names' or 'products_names').
-        matlab_session: MATLAB session for abbreviation generation.
+    Process:
+        - Iterates through reaction metabolites.
+        - Retrieves stored abbreviations for saved metabolites.
+        - Generates abbreviations for other metabolite types if needed.
+
+    Parameters:
+        reaction_objs (list): 
+            List of Reaction objects.
+        attr_key (str): 
+            Attribute name for the metabolite list 
+            (e.g., 'substrates' or 'products').
+        attr_type_key (str): 
+            Attribute name for the metabolite type list 
+            (e.g., 'substrates_types' or 'products_types').
+        attr_name_key (str): 
+            Attribute name for the metabolite name list 
+            (e.g., 'substrates_names' or 'products_names').
 
     Returns:
-        list: A list of lists containing abbreviations for each reaction's metabolites.
+        list: 
+            A list of lists containing abbreviations for each reaction's metabolites.
     """
     abbr_list = []
 
@@ -55,13 +103,24 @@ def get_metabolite_abbrs(reaction_objs, attr_key, attr_type_key, attr_name_key):
     return abbr_list
 
 def get_vmh_subsystems():
-    BASE_URL = 'https://www.vmh.life/'
-    endpoint = f"{BASE_URL}_api/subsystems/"
+    """
+    Retrieve subsystem names from the Virtual Metabolic Human (VMH) database.
+
+    Process:
+        - Fetches subsystem names from VMH via an API request.
+        - Iterates through paginated results to collect all subsystems.
+
+    Returns:
+        list:
+            A list of subsystem names from VMH.
+    """
+    base_url = 'https://www.vmh.life/'
+    endpoint = f"{base_url}_api/subsystems/"
     subsystems = []
 
     # Fetch subsystems from VMH
     while True:
-        response = requests.get(endpoint, verify=False)
+        response = requests.get(endpoint, verify=False,timeout=10)
         data = response.json()['results']
         subsystems.extend([subsystem['name'] for subsystem in data])
         endpoint = response.json().get('next')
@@ -72,6 +131,23 @@ def get_vmh_subsystems():
 
 
 def get_subsystems(request):
+    """
+    Retrieve subsystem names from VMH and merge them with stored subsystems.
+
+    Process:
+        - Fetches subsystems from VMH.
+        - Retrieves stored subsystems from the local database.
+        - Combines both sets of subsystem names.
+
+    Parameters:
+        request (HttpRequest): 
+            The HTTP request object.
+
+    Returns:
+        JsonResponse:
+            - Success: A list of subsystem names.
+            - Error: If the request fails.
+    """
     try:
         subsystems = get_vmh_subsystems()
 
@@ -90,6 +166,22 @@ def get_subsystems(request):
 
 @csrf_exempt
 def update_subsystems(request):
+    """
+    Update the local database with new subsystems.
+
+    Process:
+        - Parses the list of new subsystems from the request.
+        - Adds each subsystem to the database if it does not already exist.
+
+    Parameters:
+        request (HttpRequest): 
+            The HTTP request containing `subsystems` (list of subsystem names).
+
+    Returns:
+        JsonResponse:
+            - Success: Confirmation of successful update.
+            - Error: If an exception occurs or the request method is invalid.
+    """
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -107,13 +199,32 @@ def update_subsystems(request):
 
 @csrf_exempt
 def prepare_add_to_vmh(request):
+    """
+    Prepare reactions for submission to VMH.
+
+    Process:
+        - Validates and fetches reactions by their IDs.
+        - Checks if reactions are already in VMH.
+        - Retrieves metabolite abbreviations.
+        - Identifies metabolites that need new names in VMH.
+        - Returns structured data for reaction submission.
+
+    Parameters:
+        request (HttpRequest): 
+            The HTTP request containing `reactionIds` (list of reaction IDs).
+
+    Returns:
+        JsonResponse:
+            - Success: Data required for reaction submission.
+            - Error: If reactions are missing, already in VMH, or an error occurs.
+    """
     if request.method != 'POST':
         return JsonResponse({'status': 'error',
                              'message': 'Invalid request method. Use POST instead.'},
                             status=400)
     try:
         request_data = json.loads(request.body)
-        reactionIds = request_data['reactionIds']
+        reaction_ids = request_data['reactionIds']
     except json.JSONDecodeError:
         return JsonResponse(
             {'status': 'error', 'message': 'Invalid JSON data.'}, status=400)
@@ -128,7 +239,7 @@ def prepare_add_to_vmh(request):
     try:
         reaction_objs = [
             Reaction.objects.get(
-                pk=int(reactionId)) for reactionId in reactionIds]
+                pk=int(reaction_id)) for reaction_id in reaction_ids]
 
         in_vmh = [
             reaction.vmh_found and not reaction.vmh_found_similar for reaction in reaction_objs]
@@ -138,18 +249,32 @@ def prepare_add_to_vmh(request):
                     reaction_objs, in_vmh) if found]
             names = [reaction.short_name for reaction in reaction_objs_in_vmh]
             return JsonResponse(
-                {'status': 'error', 'message': f'The following reactions are already in VMH: {", ".join(names)}'})
+                {'status': 'error',
+                 'message': f'The following reactions are already in VMH: {", ".join(names)}'}
+            )
+        subs_in_vmh = [
+            json.loads(reaction.subs_found) if reaction.subs_found else []
+            for reaction in reaction_objs
+        ]
+        prods_in_vmh = [
+            json.loads(reaction.prod_found) if reaction.prod_found else []
+            for reaction in reaction_objs
+        ]
+        subs_abbr = get_metabolite_abbrs(
+            reaction_objs,
+            'substrates',
+            'substrates_types',
+            'substrates_names'
+        )
 
-        subs_in_vmh = [json.loads(reaction.subs_found) if reaction.subs_found else [
-        ] for reaction in reaction_objs]
-        prods_in_vmh = [json.loads(reaction.prod_found) if reaction.prod_found else [
-        ] for reaction in reaction_objs]
-
-        subs_abbr = get_metabolite_abbrs(reaction_objs, 'substrates', 'substrates_types', 'substrates_names')
-        prods_abbr = get_metabolite_abbrs(reaction_objs, 'products', 'products_types', 'products_names')
-
-        subs_need_new_names = [[] for _ in reactionIds]
-        prods_need_new_names = [[] for _ in reactionIds]
+        prods_abbr = get_metabolite_abbrs(
+            reaction_objs,
+            'products',
+            'products_types',
+            'products_names'
+        )
+        subs_need_new_names = [[] for _ in reaction_ids]
+        prods_need_new_names = [[] for _ in reaction_ids]
 
         for idx, in_vmh_list in enumerate(subs_in_vmh):
             for j, sub_in_vmh in enumerate(in_vmh_list):
@@ -168,7 +293,7 @@ def prepare_add_to_vmh(request):
                         reaction_objs[idx].products_names)[j])
                     prods_need_new_names[idx].append(need_new_name)
 
-        reaction_abbrs = ['' for _ in reactionIds]
+        reaction_abbrs = ['' for _ in reaction_ids]
 
         return JsonResponse({
             'status': 'success',
@@ -187,12 +312,43 @@ def prepare_add_to_vmh(request):
 
 
 def bypass_search_func(metabolites, types, *args, **kwargs):
-    # Always return False for found and None for abbreviation
+    """
+    Dummy function to bypass metabolite search.
+
+    Process:
+        - Always returns False for metabolite found status.
+        - Returns None for metabolite abbreviations.
+
+    Parameters:
+        metabolites (list): List of metabolite identifiers.
+        types (list): List of metabolite types.
+
+    Returns:
+        tuple:
+            - A list of False values (indicating metabolites are not found).
+            - A list of None values (indicating no abbreviations).
+    """
     return [False], [None]
 
 
-@csrf_exempt  # Remove this if you want to deal with CSRF tokens later
+@csrf_exempt
 def create_formula_abbr(request):
+    """
+    Generate a metabolite abbreviation.
+
+    Process:
+        - Parses metabolite details from the request.
+        - Generates a new abbreviation using the `gen_metabolite_abbr` function.
+
+    Parameters:
+        request (HttpRequest): 
+            The HTTP request containing `metabolite`, `mtype`, and `metabolite_name`.
+
+    Returns:
+        JsonResponse:
+            - Success: The generated abbreviation.
+            - Error: If input data is missing or the request method is invalid.
+    """
     if request.method == 'POST':
         # Parse JSON data from the request body
         try:
@@ -202,7 +358,7 @@ def create_formula_abbr(request):
             metabolite_name = data.get('metabolite_name')
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        
+
         # Ensure all required fields are present
         if not all([mtype, metabolite_name]):
             return JsonResponse({'error': 'Missing data'}, status=400)
@@ -219,15 +375,30 @@ def create_formula_abbr(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-
 def add_to_vmh(request):
     """
-    Main function to handle the request for adding reactions to VMH.
+    Submit reactions and metabolites to VMH.
+
+    Process:
+        - Validates the user and their permissions.
+        - Checks for missing reaction details (e.g., name, abbreviation, confidence score).
+        - Ensures reaction names and abbreviations are unique in VMH.
+        - Checks whether metabolites already exist in VMH.
+        - Sends metabolite and reaction data to VMH via MATLAB.
+        - Logs added metabolites and reactions.
+
+    Parameters:
+        request (HttpRequest): 
+            The HTTP request containing reaction and metabolite details.
+
+    Returns:
+        JsonResponse:
+            - Success: Confirmation of reactions and metabolites added to VMH.
+            - Error: If validation fails or an error occurs during submission.
     """
     req_body = json.loads(request.body)
-
-    userID = req_body.get('userID')
-    user = User.objects.get(pk=userID)
+    user_id= req_body.get('userID')
+    user = User.objects.get(pk=user_id)
     if not user:
         return JsonResponse(
             {'status': 'error', 'message': 'Invalid user key.'}, status=404)
@@ -241,59 +412,21 @@ def add_to_vmh(request):
     reaction_ids = []
     not_enough_info, no_comments, not_balanced = [], [], []
     met_added_info = {}
-    names_list = [reaction['short_name'] for reaction in reactions]
-    abbr_list = [reaction['abbreviation'] for reaction in reactions]
 
-    # Check for abbreviations, names, and confidence scores
-    missing_names = [reaction['short_name'] == '' for reaction in reactions]
-    missing_abbrs = [reaction['abbreviation'] == '' for reaction in reactions]
-    missing_conf_scores = [reaction['confidence_score']
-                           == '" "' for reaction in reactions]
+    # Validate reaction fields (missing info and duplicates)
+    error_response = validate_reaction_fields(reactions)
+    if error_response:
+        return error_response
 
-    if True in missing_names:
-        return JsonResponse(
-            {'status': 'error', 'message': 'Please enter a description for reaction'})
+    # Validate reaction existence in VMH (names and abbreviations)
+    error_response = validate_reaction_existence(reactions)
+    if error_response:
+        return error_response
 
-    if True in missing_abbrs:
-        return JsonResponse({'status': 'error',
-                             'message': 'Please enter an abbreviation'})
-
-    if True in missing_conf_scores:
-        return JsonResponse(
-            {'status': 'error', 'message': 'Please enter a confidence score for all reactions'})
-
-    for name in names_list:
-        if names_list.count(name) > 1:
-            return JsonResponse(
-                {'status': 'error', 'message': f'Reaction with name `{name}` is repeated in the list.'})
-    for abbr in abbr_list:
-        if abbr_list.count(abbr) > 1:
-            return JsonResponse(
-                {'status': 'error', 'message': f'Reaction with abbreviation `{abbr}` is repeated in the list.'})
-
-    name_in_vmh, abbr_in_vmh = check_names_abbrs_vmh(
-        [(reaction['short_name'], reaction['abbreviation']) for reaction in reactions])
-    if True in list(name_in_vmh.values()):
-        name_in_vmh_reactions = [
-            reaction for reaction, in_vmh in zip(
-                reactions, name_in_vmh.values()) if in_vmh]
-        return JsonResponse(
-            {
-                'status': 'error',
-                'message': f'The following reaction descriptions are already in VMH: {", ".join([reaction["short_name"] for reaction in name_in_vmh_reactions])}'})
-    if True in list(abbr_in_vmh.values()):
-        abbr_in_vmh_reactions = [
-            reaction for reaction, in_vmh in zip(
-                reactions, abbr_in_vmh.values()) if in_vmh]
-        return JsonResponse(
-            {
-                'status': 'error',
-                'message': f'The following reaction abbreviations are already in VMH: {", ".join([reaction["abbreviation"] for reaction in abbr_in_vmh_reactions])}'})
-
-    reactions_new_subsInfo = [
+    reactions_new_subs_info = [
         json.loads(
             reaction['substrates_info']) for reaction in reactions]
-    reactions_new_prodsInfo = [json.loads(
+    reactions_new_prods_info = [json.loads(
         reaction['products_info']) for reaction in reactions]
     reactions_subs_found = [
         json.loads(
@@ -303,41 +436,16 @@ def add_to_vmh(request):
         json.loads(
             Reaction.objects.get(
                 pk=reaction['pk']).prod_found) for reaction in reactions]
-    
-    subs_names_vmh, subs_abbr_vmh, prods_names_vmh, prods_abbr_vmh = check_met_names_abbrs_vmh(
-        reactions_new_subsInfo, reactions_new_prodsInfo, reactions_subs_found, reactions_prods_found)
-    if True in list(subs_names_vmh.values()):
-        subs_names_in_vmh = [
-            sub for sub in subs_names_vmh.keys() if subs_names_vmh[sub]]
-        return JsonResponse(
-            {
-                'status': 'error',
-                'message': f'The following substrates have metabolite names that are already in VMH: {", ".join(subs_names_in_vmh)}'})
-    if True in list(subs_abbr_vmh.values()):
-        subs_abbrs_in_vmh = [
-            sub for sub in subs_abbr_vmh.keys() if subs_abbr_vmh[sub]]
-        return JsonResponse(
-            {
-                'status': 'error',
-                'message': f'The following substrates have metabolite abbreviations that are already in VMH: {", ".join(subs_abbrs_in_vmh)}'})
-    if True in list(prods_names_vmh.values()):
-        prods_names_in_vmh = [
-            prod for prod in prods_names_vmh.keys() if prods_names_vmh[prod]]
-        return JsonResponse(
-            {
-                'status': 'error',
-                'message': f'The following products have metabolite names that are already in VMH: {", ".join(prods_names_in_vmh)}'})
-    if True in list(prods_abbr_vmh.values()):
-        prods_abbrs_in_vmh = [
-            prod for prod in prods_abbr_vmh.keys() if prods_abbr_vmh[prod]]
-        return JsonResponse(
-            {
-                'status': 'error',
-                'message': f'The following products have metabolite abbreviations that are already in VMH: {", ".join(prods_abbrs_in_vmh)}'})
+
+    # Validate metabolite existence in VMH
+    error_response = validate_metabolite_existence(reactions_new_subs_info, reactions_new_prods_info,
+                                                    reactions_subs_found, reactions_prods_found)
+    if error_response:
+        return error_response
+
     subs_abbr = []
     prods_abbr = []
     for reaction in reactions:
-
         obj = Reaction.objects.get(pk=reaction['pk'])
         obj.short_name = reaction['short_name']
         reaction_ids.append(obj.id)
@@ -377,7 +485,9 @@ def add_to_vmh(request):
         if f"Created and Added to VMH via Constructor by: {user_full_name}" not in list(
                 map(lambda x: x['info'], new_comments)):
             new_comments.append(
-                {'info': f"Created and Added to VMH via Constructor by: {user_full_name}", 'user_name': user_name})
+                {'info': f"Created and Added to VMH via Constructor by: {user_full_name}",
+                  'user_name': user_name}
+                )
         not_enough_info.append(
             len(new_references) < 1 and len(new_ext_links) < 1)
         no_comments.append(len(new_comments) < 2)
@@ -399,36 +509,21 @@ def add_to_vmh(request):
         Reaction.objects.get(
             pk=reaction_id) for reaction_id in reaction_ids]
 
-    if True in not_enough_info:
-        not_enough_info_reactions = [
-            reaction for reaction, not_enough in zip(
-                reaction_objs, not_enough_info) if not_enough]
-        return JsonResponse(
-            {
-                'status': 'error',
-                'message': f'The following reactions do not have at least one reference or external link: {", ".join([reaction.short_name for reaction in not_enough_info_reactions])}'})
-    if True in no_comments:
-        no_comments_reactions = [
-            reaction for reaction,
-            no_comment in zip(
-                reaction_objs,
-                no_comments) if no_comment]
-        return JsonResponse(
-            {
-                'status': 'error',
-                'message': f'The following reactions do not have at least one comment: {", ".join([reaction.short_name for reaction in no_comments_reactions])}'})
-    if True in not_balanced:
-        not_balanced_reactions = [
-            reaction for reaction,
-            not_balanced in zip(
-                reaction_objs,
-                not_balanced) if not_balanced]
-        return JsonResponse(
-            {
-                'status': 'error',
-                'message': f'The following reactions are not balanced: {", ".join([reaction.short_name for reaction in not_balanced_reactions])}'})
-    all_vmh = False if any([any(element != 'VMH' for element in json.loads(reaction.substrates_types)) or any(
-        element != 'VMH' for element in json.loads(reaction.products_types)) for reaction in reaction_objs]) else True
+    error_response = validate_reaction_objects(
+        reaction_objs, 
+        not_enough_info, 
+        no_comments, 
+        not_balanced
+    )    
+    if error_response:
+        return error_response
+
+    all_vmh = all(
+        all(element == 'VMH' for element in json.loads(reaction.substrates_types)) and
+        all(element == 'VMH' for element in json.loads(reaction.products_types))
+        for reaction in reaction_objs
+    )
+
     reaction_identifiers, reaction_names = [
         reaction['abbreviation'] for reaction in reactions], [
         reaction.short_name for reaction in reaction_objs]
@@ -484,8 +579,16 @@ def add_to_vmh(request):
             subs_abbr[idx],
             prods_abbr[idx]) for idx in range(
             len(reaction_objs))]
-    reaction_directions, reaction_subsystems, reaction_references, reaction_external_links, reaction_gene_info, reaction_comments, reaction_confidence_scores = gather_reaction_details(
-        reaction_objs)
+    (
+        reaction_directions,
+        reaction_subsystems,
+        reaction_references,
+        reaction_external_links,
+        reaction_gene_info,
+        reaction_comments,
+        reaction_confidence_scores
+    ) = gather_reaction_details(reaction_objs)
+
     json_paths = rxn_prepare_json_paths_and_variables(
         reaction_identifiers,
         reaction_names,
@@ -525,7 +628,7 @@ def add_to_vmh(request):
         return JsonResponse({'status': 'success',
                              'rxn_added_info': rxn_added_info,
                              'met_added_info': met_added_info})
-    else:
-        matlab_session.quit()
-        return JsonResponse(
-            {'status': 'error', 'message': matlab_result['message']})
+
+    matlab_session.quit()
+    return JsonResponse(
+        {'status': 'error', 'message': matlab_result['message']})

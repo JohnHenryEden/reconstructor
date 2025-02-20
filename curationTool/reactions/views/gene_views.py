@@ -1,27 +1,43 @@
+"""
+This module provides various functions related to gene data retrieval, parsing, 
+and mapping to metabolic reactions.
+
+It includes:
+- `get_gene_info`: Retrieves gene information from external databases (Entrez, VMH, HGNC).
+- `gene_parsing`: Parses gene expressions and validates logical statements.
+- `gene_details_view`: Fetches detailed gene-related data including organ and subcellular locations.
+- `parse_gene_info`: Extracts organ and subcellular location data from gene annotations.
+- `parse_genes`: Extracts individual gene names from logical statements.
+- `extract_unique_elements`: Processes lists to extract unique elements.
+- `map_locations_to_wbm`: Maps subcellular locations to the WBM categories.
+"""
 
 import json
+import os
 import re
 import requests
+import pandas as pd
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from reactions.organ_data import ORGAN_MAPPING, location_mapping
 from reactions.utils.utils import fetch_and_map_gene_expression, get_subcellular_locations
-import pandas as pd
-import os
-
 
 def get_gene_info(request):
     """
-    Retrieves gene information based on user input.
+    Retrieve gene information based on the user's input.
 
-    Args:
-        request (HttpRequest): The HTTP request object.
+    Process:
+        - Fetches gene information from Entrez, VMH, or HGNC based on the type of identifier.
+        - Returns the gene symbol if found.
+        - Handles cases where the gene is not found in the respective databases.
+
+    Parameters:
+        request (HttpRequest): The HTTP request object containing 'gene' and 'type'.
 
     Returns:
-        JsonResponse: The JSON response containing the gene information.
-
-    Raises:
-        None
+        JsonResponse:
+            - Success: JSON containing `symbol` or `hgnc_id`.
+            - Error: If the gene is not found or an invalid type is provided.
     """
     gene_input = request.POST.get('gene')
     type_input = request.POST.get('type')
@@ -38,7 +54,7 @@ def get_gene_info(request):
             "retmode": "json"
         }
 
-        entrez_response = requests.get(entrez_base_url, params=entrez_params)
+        entrez_response = requests.get(entrez_base_url, params=entrez_params,timeout=10)
 
         if entrez_response.status_code == 200:
             entrez_data = entrez_response.json()
@@ -51,19 +67,20 @@ def get_gene_info(request):
         # If not found in Entrez, check VMH
         vmh_base_url = 'https://www.vmh.life/'
         vmh_endpoint = f"{vmh_base_url}_api/genes/?gene_number={gene_input}"
-        vmh_response = requests.get(vmh_endpoint, verify=False)
+        vmh_response = requests.get(vmh_endpoint, verify=False,timeout=10)
 
         if vmh_response.status_code != 200:
             return JsonResponse(
                 {
                     'error': True,
-                    'message': f'VMH API returned error {vmh_response.status_code} for gene number `{gene_input}`'},
+                    'message': f'VMH API returned error {vmh_response.status_code}'
+                     f'for gene number `{gene_input}`'},
                 status=500)
 
         vmh_data = vmh_response.json()
         if vmh_data['count'] == 0:
             return JsonResponse(
-                {'error': True, 'message': f'Gene number `{gene_input}` not found in VMH'}, status=404)
+                {'error': True, 'message': f'Gene number `{gene_input}` not found in VMH'}, status=404) # pylint: disable=line-too-long
 
         gene = vmh_data['results'][0]
         symbol = gene.get('symbol', '')
@@ -74,13 +91,14 @@ def get_gene_info(request):
         hgnc_base_url = 'https://rest.genenames.org/search/symbol/'
         hgnc_endpoint = f"{hgnc_base_url}{gene_input}"
         hgnc_headers = {'Accept': 'application/json'}
-        hgnc_response = requests.get(hgnc_endpoint, headers=hgnc_headers)
+        hgnc_response = requests.get(hgnc_endpoint, headers=hgnc_headers,timeout=10)
 
         if hgnc_response.status_code != 200:
             return JsonResponse(
                 {
                     'error': True,
-                    'message': f'HGNC API returned error {hgnc_response.status_code} for symbol `{gene_input}`'},
+                    'message': f'HGNC API returned error {hgnc_response.status_code}' 
+                    f'for symbol `{gene_input}`'},
                 status=500)
 
         hgnc_data = hgnc_response.json()
@@ -88,28 +106,42 @@ def get_gene_info(request):
 
         if num_found == 0:
             return JsonResponse(
-                {'error': True, 'message': f'Gene symbol `{gene_input}` not found in HGNC'}, status=404)
-        elif num_found > 1:
+                {'error': True, 'message': f'Gene symbol `{gene_input}` not found in HGNC'}, status=404) # pylint: disable=line-too-long
+        if num_found > 1:
             genes = hgnc_data['response']['docs'][:10]
             gene_symbols_and_ids = [
                 {'symbol': gene['symbol'], 'hgnc_id': gene['hgnc_id']} for gene in genes]
-            message = f"Multiple genes found for symbol `{gene_input}`. Please specify. Found genes: " + ", ".join(
+            message = f"Multiple genes found for symbol `{gene_input}`. Please specify. Found genes: " + ", ".join( # pylint: disable=line-too-long
                 [f"{gene['symbol']} (HGNC ID: {gene['hgnc_id']})" for gene in gene_symbols_and_ids])
             return JsonResponse(
                 {'error': True, 'message': message}, status=400)
-
         gene = hgnc_data['response']['docs'][0]
         hgnc_id = gene.get('hgnc_id', '')
         symbol = gene.get('symbol', '')
         return JsonResponse(
             {'error': False, 'hgnc_id': hgnc_id, 'symbol': symbol})
-
     else:
         return JsonResponse({'error': True, 'message': 'Invalid type input'})
 
 
 @csrf_exempt
 def gene_parsing(request):
+    """
+    Parse a gene logical expression and validate its format.
+
+    Process:
+        - Ensures the input follows logical statement rules (e.g., `GENE1 AND GENE2`).
+        - Identifies errors in the logical structure.
+        - Returns the processed string or an error message.
+
+    Parameters:
+        request (HttpRequest): The HTTP request containing a JSON with `geneinfo`.
+
+    Returns:
+        JsonResponse:
+            - Success: JSON with the processed logical statement.
+            - Error: JSON with an error message if the format is incorrect.
+    """
     if request.method == 'POST':
         data = json.loads(request.body)
         statement = data.get('geneinfo', '')
@@ -117,10 +149,9 @@ def gene_parsing(request):
         # Patterns for various parts of the logical statement
         alphanumeric_pattern = r'[A-Za-z0-9]+'
         operator_pattern = r'(AND|OR)'
-        substatement_pattern = fr'\(\s*{alphanumeric_pattern}\s*{operator_pattern}\s*{alphanumeric_pattern}\s*\)'
 
         # Full pattern combining the subpatterns
-        full_pattern = fr'^{alphanumeric_pattern}\s*({operator_pattern}\s*{alphanumeric_pattern}\s*)*$'
+        full_pattern = fr'^{alphanumeric_pattern}\s*({operator_pattern}\s*{alphanumeric_pattern}\s*)*$' # pylint: disable=line-too-long
 
         # Compile the regular expression
         pattern = re.compile(full_pattern)
@@ -138,12 +169,21 @@ def gene_parsing(request):
             if not re.match(alphanumeric_pattern, statement):
                 response_data['error'] = 'The statement must start with a Gene.'
             elif not re.search(fr'\s*{operator_pattern}\s*', statement):
-                response_data['error'] = 'The statement must contain at least one AND/OR operator after an alphanumeric string.'
+                response_data['error'] = (
+                    "The statement must contain at least one AND/OR operator "
+                    "after an alphanumeric string."
+                    )
             elif re.search(r'[^A-Za-z0-9\s\(\)ANDOR]', statement):
-                response_data['error'] = 'The statement contains invalid characters. Only alphanumeric characters, spaces, parentheses, and the words AND/OR are allowed.'
+                response_data['error'] = (
+                    "The statement contains invalid characters. Only alphanumeric characters, "
+                    "spaces, parentheses, and the words AND/OR are allowed."
+                )
             else:
-                response_data[
-                    'error'] = 'The statement does not match the required logical pattern. Ensure it follows the structure: alphanumeric (AND/OR alphanumeric).'
+                response_data['error'] = (
+                    "The statement does not match the required logical pattern. "
+                    "Ensure it follows the structure: alphanumeric (AND/OR alphanumeric)."
+                )
+
 
         return JsonResponse(response_data)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
@@ -151,7 +191,23 @@ def gene_parsing(request):
 
 @csrf_exempt
 def gene_details_view(request):
+    """
+    Retrieve and process detailed gene-related information.
 
+    Process:
+        - Reads a configuration file for data file paths.
+        - Loads gene expression data from a CSV file.
+        - Extracts and maps gene expression data to organs and subcellular locations.
+        - Constructs a structured JSON response with formatted gene details.
+
+    Parameters:
+        request (HttpRequest): The HTTP request containing gene-related query data.
+
+    Returns:
+        JsonResponse:
+            - Success: JSON containing `infoText` with gene-related details.
+            - Error: If the data processing fails or an invalid request method is used.
+    """
     base_dir = os.path.abspath(
         os.path.join(
             os.path.dirname(__file__),
@@ -250,6 +306,22 @@ def gene_details_view(request):
 
 
 def parse_gene_info(request):
+    """
+    Parse gene-related information from a formatted string.
+
+    Process:
+        - Splits the input into gene sections.
+        - Extracts organ and subcellular location data for each gene.
+        - Organizes and returns the extracted data in JSON format.
+
+    Parameters:
+        request (HttpRequest): The HTTP request containing the `info` parameter.
+
+    Returns:
+        JsonResponse:
+            - Success: JSON containing gene-organ-subcellular mappings.
+            - Error: JSON with an error message if parsing fails.
+    """
     info = request.GET.get('info', '')
 
     if not info:
@@ -289,6 +361,19 @@ def parse_gene_info(request):
 
 
 def parse_genes(data_string):
+    """
+    Extract individual gene names from a logical expression.
+
+    Process:
+        - Splits a string using `AND`, `OR`, or spaces.
+        - Filters out non-alphanumeric strings.
+
+    Parameters:
+        data_string (str): A logical gene expression string.
+
+    Returns:
+        list: A list of extracted gene names.
+    """
     # Split by spaces and logical operators, retain only alphanumeric strings
     genes = re.split(r'\s+(?:AND|OR)\s+|\s+', data_string)
     genes = [gene for gene in genes if gene.isalnum()]
@@ -296,6 +381,19 @@ def parse_genes(data_string):
 
 
 def extract_unique_elements(input_set):
+    """
+    Extract unique elements from a set by splitting comma-separated values.
+
+    Process:
+        - Iterates through each element and splits it into individual components.
+        - Returns a set of unique elements.
+
+    Parameters:
+        input_set (set): A set containing comma-separated elements.
+
+    Returns:
+        set: A set of unique elements.
+    """
     unique_elements = set()
     for item in input_set:
         elements = item.split(',')
@@ -305,7 +403,17 @@ def extract_unique_elements(input_set):
 
 def map_locations_to_wbm(subcellular_locations):
     """
-    Function to map UniProt subcellular locations to WBM categories.
+    Map UniProt subcellular locations to WBM categories.
+
+    Process:
+        - Matches each location with a predefined mapping.
+        - Returns the corresponding WBM category if found.
+
+    Parameters:
+        subcellular_locations (list): A list of subcellular locations.
+
+    Returns:
+        list: A list of mapped WBM categories.
     """
     mapped_locations = []
     for location in subcellular_locations:

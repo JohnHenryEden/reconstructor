@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from .views import (
-    about_eaderboard_views,
+    about_leaderboard_views,
     user_views,
     reaction_views,
     flag_views,
@@ -75,8 +75,8 @@ urlpatterns = [
 
     path('get_ai_response/', ai_views.get_ai_response, name='get_ai_response'),
 
-    path('stats/', about_eaderboard_views.leader_board, name='leader_board'),
-    path('about/', about_eaderboard_views.about_view, name='about'),
+    path('stats/', about_leaderboard_views.leader_board, name='leader_board'),
+    path('about/', about_leaderboard_views.about_view, name='about'),
 
     path('check-session/', utility_views.check_session_data, name='check_session'),
     path('delete-gene-info/', utility_views.delete_gene_info_from_session, name='delete_gene_info_from_session'),

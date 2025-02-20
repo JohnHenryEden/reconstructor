@@ -58,4 +58,14 @@ def get_mol_info(mols):
         stereo_locations_list.append(stereo_locations)
 
     # Return gathered information
-    return smiles, inchis, inchi_keys, mol_weights, formulas, charges, mol_file_strings, stereo_counts, stereo_locations_list
+    return {
+        'smiles': smiles,
+        'inchi_keys': inchi_keys,
+        'inchis': inchis,
+        'mol_weights': mol_weights,
+        'formulas': formulas,
+        'charges': charges,
+        'mol_file_strings': mol_file_strings,
+        'stereo_counts': stereo_counts,
+        'stereo_locations_list': stereo_locations_list
+    }
