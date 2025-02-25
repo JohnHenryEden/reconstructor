@@ -7,7 +7,7 @@ from reactions.utils.to_mol import smiles_with_explicit_hydrogens
 
 
 def get_mol_info(mols):
-    formulas, charges, mol_file_strings = [], [], []
+    metabolite_formulas, metabolite_charges, mol_file_strings = [], [], []
     stereo_counts, stereo_locations_list = [], []
     smiles, inchi_keys, inchis, mol_weights = [], [], [], []
 
@@ -42,8 +42,8 @@ def get_mol_info(mols):
         # Convert to MolBlock for 3Dmol.js visualization
         mol_block = Chem.MolToMolBlock(mol)
         mol_file_strings.append(mol_block)
-        formulas.append(mol_formula)
-        charges.append(mol_charge)
+        metabolite_formulas.append(mol_formula)
+        metabolite_charges.append(mol_charge)
 
         # Detect chiral centers (including unassigned centers)
         chiral_centers = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
@@ -63,8 +63,8 @@ def get_mol_info(mols):
         'inchi_keys': inchi_keys,
         'inchis': inchis,
         'mol_weights': mol_weights,
-        'formulas': formulas,
-        'charges': charges,
+        'metabolite_formulas': metabolite_formulas,
+        'metabolite_charges': metabolite_charges,
         'mol_file_strings': mol_file_strings,
         'stereo_counts': stereo_counts,
         'stereo_locations_list': stereo_locations_list
