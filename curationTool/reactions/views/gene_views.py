@@ -214,7 +214,6 @@ def gene_details_view(request):
             '..',
             '..',
             '..'))
-    base_dir = os.path.join(base_dir, 'reconstructor')
     # Construct the full path to the config.json file
     config_path = os.path.join(base_dir, 'config.json')
     # Load the config file

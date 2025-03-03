@@ -93,7 +93,7 @@ function setupSubmitHandler(submitButtonId, Infotextid) {
         if (infoType !== 'Gene Info') {
             var infoText = document.getElementById(Infotextid).value;
             data.infoText = infoText;
-            submitData(data);
+            submitData(data,Infotextid);
         } else {
             const geneInputs = document.getElementById('geneInfoInput');
             var geneinfo = geneInputs.textContent;
@@ -116,7 +116,7 @@ function setupSubmitHandler(submitButtonId, Infotextid) {
             .then(response => {
                 if (response.processed_string) {
                     data.infoText = response.processed_string;
-                    AddOrganLocation(data);
+                    AddOrganLocation(data,Infotextid);
                 } else {
                     if (response.error) {
                         alert(`Error: ${response.error}`);
@@ -243,7 +243,7 @@ function displayGenePredictions(predictions) {
     }
 }
 
-    function AddOrganLocation(data) {
+    function AddOrganLocation(data,Infotextid) {
         const url = '/gene_details_view/';
         fetch(url, {
             method: 'POST',
@@ -267,14 +267,14 @@ function displayGenePredictions(predictions) {
             }
 
             const results = data;
-            submitData(results);
+            submitData(results,Infotextid);
         })
         .catch(error => {
             console.error('There was a problem with the fetch operation:', error);
         });
     }
 
-    function submitData(data) {
+    function submitData(data,Infotextid) {
         var infotype = data.infoType;
         if (infotype === 'Reference' || infotype === 'External Link') {
             // assert that both extLinkType and refType cannot be empty string (strip whitespace)
@@ -313,7 +313,6 @@ function displayGenePredictions(predictions) {
         .then(response => response.json().then(data => ({ status: response.status, body: data })))
         .then(obj => {
             if (obj.status === 200) {
-
                 // Refactored to use POST request instead of GET
                 fetch(getReactionDetails, {
                     method: 'POST',
@@ -348,7 +347,17 @@ function displayGenePredictions(predictions) {
                 .catch(error => {
                     console.error('Error fetching reaction details:', error);
                 });
-    
+                showToast('Info added successfully');
+                if (Infotextid !== 'geneInfoInput') {
+                    document.getElementById(Infotextid).value = '';
+                }
+                else {
+                    //remove children of geneInfoInput
+                    var geneInfoInput = document.getElementById('geneInfoInput');
+                    while (geneInfoInput.firstChild) {
+                        geneInfoInput.removeChild(geneInfoInput.firstChild);
+                    }
+                }
             } else {
                 console.error('Error:', obj.body);
                 alert(obj.body.message);
@@ -754,7 +763,7 @@ function displayGenePredictions(predictions) {
                             reactionId: reactionId.reaction_id  // Include the reaction ID
                         };
                         // Submit the data to the reaction
-                        submitData(dataToSubmit);
+                        submitData(dataToSubmit, 'geneInfoInput');
                     });
             
                     // After all data has been submitted, clear the session

@@ -65,7 +65,7 @@ def get_mol_info(mols):
         'mol_weights': mol_weights,
         'metabolite_formulas': metabolite_formulas,
         'metabolite_charges': metabolite_charges,
-        'mol_file_strings': mol_file_strings,
+        'metabolite_mol_file_strings': mol_file_strings,
         'stereo_counts': stereo_counts,
         'stereo_locations_list': stereo_locations_list
     }
