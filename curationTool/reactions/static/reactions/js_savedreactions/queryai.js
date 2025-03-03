@@ -50,7 +50,10 @@ document.getElementById('submitGene').addEventListener('click', function() {
             if (response.ok) {
                 return data; // Ensure the server responds with JSON
             } else {
-                throw new Error(data.error_message || 'Network response was not ok.');
+                if (response.reason === 'permission_denied'){
+                    return
+                }
+                showToast('AI PREDICTION ERROR : ' + data.error_message || 'Network response was not ok', '#f44336');
             }
         });
     })
@@ -101,7 +104,7 @@ document.getElementById('submitGene').addEventListener('click', function() {
         llmResponseContainer.innerHTML = formattedReactions;
         llm_html = formattedReactions;
         if (llmResponseContainer.innerHTML == '') {
-            errorContainer.innerText = ' Apologies, no reactions predicted by the AI for that gene :('
+            errorContainer.innerText = 'No reactions predicted by the AI for that gene :('
             errorContainer.style.display = 'block';
             llmResponseContainer.style.display = 'none';
         }

@@ -45,6 +45,7 @@ def get_ai_response(request):
             return JsonResponse(
                 {
                     'status': 'error',
+                    'reason': 'permission_denied',
                     'error_message': 'User does not have permission to access this feature'},
                 status=403)
         if user:
