@@ -1,4 +1,5 @@
 ## 🎥 Video Tutorials
+> You can explore and use Constructor without creating an account. However, to access features like saving reactions, storing reaction metadata, managing your own metabolites, and sharing data with other users, you'll need to be logged in. Creating an account is straightforward and free.
 
 | Topic                         | Description | Watch |
 |------------------------------|-------------|-------|
