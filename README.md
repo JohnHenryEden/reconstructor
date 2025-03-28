@@ -1,7 +1,7 @@
-# Reconstructor
+# Constructor
 This tool is for the curation of reconstruction reactions. It allows users to preview, save and run tests on reactions of their choice.
 
-It is live on http://reconstructor.humanmetabolism.org/
+It is live on http://constructor.humanmetabolism.org/
 
 ## Installation and Setup (to run locally)
 To get started with the Reconstruction Curation Tool, follow these steps to set up the environment on your local machine.
@@ -68,7 +68,7 @@ Below is the architecture diagram for the project:
     - Customizes buttons for viewing and deleting reactions.
     - Ensures readability and clear layout for reaction lists.
 3. **leader_board.css**
-   - Styles for the **stats** page of the Reconstructor application.
+   - Styles for the **stats** page of the Constructor application.
    - Focuses on the layout and presentation of the leaderboard and associated charts.
    - Ensures a clean and responsive design with clear text and interactive elements.
    - Customizes the table for displaying reaction statistics, including alternating row colors, hover effects, and column widths.
