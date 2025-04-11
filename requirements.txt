@@ -1,5 +1,5 @@
 Django==5.0.1
-matlabengine==24.1.4
+matlabengine==24.2.2
 rdkit==2023.9.4
 Requests==2.31.0
 urllib3==1.26.5

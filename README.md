@@ -10,7 +10,7 @@ Ensure you have the following installed:
 - Python (version 3.10.12)
 - Django (version 5.0.1)
 - RDT - https://github.com/asad/ReactionDecoder/releases (v2.4.1)
-- Matlab R2024a
+- Matlab R2024b
 
 ### Run the Application
 1. Make sure you have postgresql or another DB management system
