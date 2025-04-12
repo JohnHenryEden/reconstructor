@@ -8,6 +8,49 @@ document.querySelectorAll('.view-btn').forEach(function(button, index) {
     });
 });
 
+// Attach event listener to buttons with the class 'export-btn'
+document.querySelectorAll('.export-btn').forEach(function(button, index) {
+    button.addEventListener('click', function() {
+        const reactionData = reactions[index];
+        const reactionId = reactionData.pk;
+            
+        var data = new FormData();
+        data.append('reaction_id', reactionId);
+        data.append('userID', sessionStorage.getItem('userID'));
+        fetch("reactions/exportToCsv/", {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken,
+            },
+            body: data
+        })
+        .then(async response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            // download the csv
+            const blob = await response.blob();
+            const newBlob = new Blob([blob]);
+
+            const blobUrl = window.URL.createObjectURL(newBlob);
+
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.setAttribute('download', `${reactionData.fields.short_name}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+
+            // clean up Url
+            window.URL.revokeObjectURL(blobUrl);
+        })
+        .catch(error => {
+            console.error('There was a problem with the fetch operation:', error);
+            alert('An error occurred while creating CSV file.');
+        });
+    });
+});
 function cloneReaction(reactionId) {
     var data = new FormData();
     data.append('reaction_id', reactionId);

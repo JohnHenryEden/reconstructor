@@ -198,6 +198,16 @@ button.view-btn {
 button.view-btn:hover, button.view-btn:active {
     background-color: #45a049; /* Slightly darker green on hover/active */
 }
+/* Specific style for the 'View' button */
+button.export-btn {
+    background-color: #700fef; /* Purple background */
+    color: white;
+    margin-bottom: 5px; /* Add some space between buttons */
+}
+
+button.export-btn:hover, button.export-btn:active {
+    background-color: #8106d2; /* Slightly darker purple on hover/active */
+}
 
 /* Specific style for the 'Delete' button */
 button.delete-btn {

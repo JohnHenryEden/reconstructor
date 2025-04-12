@@ -15,6 +15,7 @@ Dependencies:
 """
 import json
 import re
+import csv
 
 from rdkit import RDLogger, Chem
 from rdkit.Chem import MolToInchiKey, AllChem
@@ -22,7 +23,7 @@ from rdkit.Chem.rdMolDescriptors import CalcMolFormula # pylint: disable=import-
 from rdkit.Chem.Descriptors import MolWt # pylint: disable=import-error
 from django.shortcuts import render, redirect
 from django.urls import reverse
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.core import serializers
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -176,10 +177,10 @@ def input_reaction(request):
     else:
         response_data = RDT(
             reaction_rxn_file,
-            destination_path_png=f'media/images/visual{reaction.id}.png',
-            destination_path_rxn=f'media/rxn_files/rxn{reaction.id}.rxn')
+            destination_path_png=f'curationTool/media/images/visual{reaction.id}.png',
+            destination_path_rxn=f'curationTool/media/rxn_files/rxn{reaction.id}.rxn')
         reaction_info = get_reaction_info(
-            f'media/rxn_files/rxn{reaction.id}.rxn', direction
+            f'curationTool/media/rxn_files/rxn{reaction.id}.rxn', direction
         )
     balanced_count = reaction_info['balanced_count']
     subs_atoms = reaction_info['subs_atoms']
@@ -1110,6 +1111,52 @@ def identical_reaction(request):
 
     return JsonResponse({'exists': False, 'status': 'success'})
 
+
+@require_POST
+def export_reaction_to_csv(request):
+    """
+    Export the reaction to a .csv file for the user.
+
+    Process:
+        - Fetches the reaction from the database.
+        - Creates the .csv file based on reaction record.
+        - Export the .csv file
+
+    Parameters:
+        request (HttpRequest): The HTTP request containing `reaction_id` and `userID`.
+
+    Returns:
+        HttpResponse:
+            - Success: Response with the .csv file
+        JsonResponse:
+            - Error: If exporting fails.
+    """
+    reaction_id = request.POST.get('reaction_id')
+    user_id = request.POST.get('userID')
+    if not user_id or user_id == "" or user_id == "null":
+        return JsonResponse({'status': 'error',
+                            'message': 'No user data passed'})
+    if not reaction_id or reaction_id == "" or reaction_id == "null":
+        return JsonResponse({'status': 'error',
+                            'message': 'No reaction data passed'})
+    try:
+        User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({'status': 'error',
+                            'message': 'User does not exist'})
+    try:
+        export_reaction = Reaction.objects.get(pk=reaction_id)
+        response = HttpResponse(
+            content_type="text/csv",
+            headers={"Content-Disposition": 'attachment; filename="' + export_reaction.short_name + '.csv"'},
+        )
+        writer = csv.writer(response)
+        writer.writerow(["Name", "Substrates", "Products", "Direction", "Subsystem", "Balanced Charge", "Balanced Count", "Confidence Score"])
+        writer.writerow([export_reaction.short_name, export_reaction.substrates, export_reaction.products, export_reaction.direction, export_reaction.subsystem, export_reaction.balanced_charge, export_reaction.balanced_count, export_reaction.confidence_score])
+        return response
+    except Reaction.DoesNotExist:
+        return JsonResponse({'status': 'error',
+                            'message': 'Reaction does not exist'})
 
 @require_POST
 def clone_reaction_view(request):

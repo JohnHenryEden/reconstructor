@@ -17,6 +17,7 @@ import json
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -91,8 +92,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         # 'NAME': 'curationToolDB',
         'NAME': 'curationtooldb1',
-        'USER': 'saleh',
-        'PASSWORD': '1curationTool1',
+        'USER': 'postgres',
+        'PASSWORD': 'postgres',
         'HOST': 'localhost',  
         'PORT': '5432',       
     }

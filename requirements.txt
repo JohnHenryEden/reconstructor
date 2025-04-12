@@ -5,3 +5,11 @@ Requests==2.31.0
 urllib3==1.26.5
 zeep==4.2.1
 scikit-learn>=1.0
+IPython
+openai
+coreapi
+numpy
+pubchempy
+pandas
+psycopg
+psycopg2

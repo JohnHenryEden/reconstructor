@@ -27,6 +27,7 @@ urlpatterns = [
     path('get_reaction_details/', reaction_views.get_reaction_details, name='get_reaction_details'),
     path('delete_reaction_info/', reaction_views.delete_reaction_info, name='delete_reaction_info'),
     path('saved_reactions/reactions/clone/', reaction_views.clone_reaction_view, name='clone_reaction'),
+    path('saved_reactions/reactions/exportToCsv/', reaction_views.export_reaction_to_csv, name='export_reaction_to_csv'),
     path('user-reactions-vmh/', reaction_views.get_user_reactions_and_vmh, name='get_user_reactions_and_vmh'),
     path('get_reaction/<int:reaction_id>/', reaction_views.get_reaction, name='get_reaction'),
     path('update_gene_info/', reaction_views.update_gene_info, name='update_gene_info'),
